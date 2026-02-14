@@ -8,9 +8,18 @@ Yolo is a bubblewrap-based sandbox for running commands in an isolated NixOS-lik
 
 ## Architecture
 
-- **`flake.nix`** - Nix flake that builds a NixOS system profile (`sandboxConfig`) and packages the `yolo` script with `@SANDBOX_PROFILE@` and `@SANDBOX_ETC@` placeholders replaced by Nix store paths. Uses treefmt-nix for `formatter` and `checks` outputs.
+- **`flake.nix`** - Nix flake that builds a NixOS system profile (`sandboxConfig`) and packages the `yolo` script with `@SANDBOX_PROFILE@` and `@SANDBOX_ETC@` placeholders replaced by Nix store paths. Uses treefmt-nix for `formatter` and `checks` outputs (including ruff and mypy for Python test code).
 - **`yolo.sh`** - Bash script (template) that generates minimal `/etc` files at runtime, then `exec`s into `bwrap` with namespace isolation (IPC, PID, UTS). The current working directory is bind-mounted read-write; home is a tmpfs.
-- **`tests/test-poc.sh`** - Integration tests that build yolo via `nix build`, then verify sandbox behavior (isolation, networking, nix daemon access, exit code propagation).
+- **`justfile`** - Task runner with targets: `check` (lint + test), `lint` (`nix flake check`), `fmt` (`nix fmt`), `test` (`pytest tests/ -v`).
+- **`pyproject.toml`** - Python tooling configuration for pytest, ruff, and mypy.
+- **`tests/`** - Pytest integration test suite:
+  - `conftest.py` — shared fixtures (`yolo_bin`, `yolo`, `yolo_cmd`, `yolo_with_state`)
+  - `test_basic.py` — basic command execution and exit code propagation
+  - `test_isolation.py` — environment, filesystem, and namespace isolation
+  - `test_tools.py` — parameterized tool availability checks
+  - `test_persistence.py` — state persistence across sandbox runs
+  - `test_environment.py` — terminfo, locale, SSL, /etc, and nix integration
+  - `test_subcommands.py` — subcommand dispatch and error handling
 
 ## Commands
 
@@ -24,19 +33,19 @@ Run all checks (lint + test):
 just check
 ```
 
-Lint (runs `nix flake check` — shellcheck, statix, deadnix, formatting):
+Lint (runs `nix flake check` — shellcheck, statix, deadnix, ruff, mypy, formatting):
 ```
 just lint
 ```
 
-Format code (runs `nix fmt` — nixfmt + shfmt):
+Format code (runs `nix fmt` — nixfmt, shfmt, ruff format):
 ```
 just fmt
 ```
 
 Run tests:
 ```
-just test          # runs tests/test-poc.sh
+just test          # runs pytest tests/ -v
 ```
 
 Run a command in the sandbox:
@@ -47,5 +56,13 @@ yolo run <cmd> [args...]
 ## Key Constraints
 
 - x86_64-linux only (hardcoded in flake.nix)
-- Tests require a running Nix daemon and network access (they test `curl` to github.com and `nix build nixpkgs#hello`)
+- Tests require a running Nix daemon, bwrap user namespaces, and network access
 - The `yolo.sh` script is a template: `@SANDBOX_PROFILE@` and `@SANDBOX_ETC@` are replaced at build time by `writeShellApplication` in flake.nix, so the raw script cannot be run directly
+
+## Code Comments
+
+- **Explain "why", not "what".** A comment should provide reasoning, intent, or context that isn't obvious from the code itself. Do not restate what the code does.
+- **Prefer naming over comments.** If a comment can be eliminated by renaming a variable, function, or extracting a well-named helper — do that instead.
+- **No section-header comments.** Do not use decorative separators like `# --- Section Name ---` to organize code. Use module structure (separate files/classes) and descriptive names instead.
+- **TODOs are fine** when they reference a concrete issue or condition for removal (e.g., `# TODO: remove once upstream PR #123 lands`).
+- **Configuration grouping comments are acceptable** in flat lists (e.g., package lists in Nix files) where there is no structural alternative.

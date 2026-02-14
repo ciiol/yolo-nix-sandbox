@@ -9,4 +9,4 @@ fmt:
     nix fmt
 
 test:
-    bash tests/test-poc.sh
+    pytest tests/ -v

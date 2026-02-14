@@ -53,8 +53,12 @@
 
       treefmtEval = treefmt-nix.lib.evalModule pkgs {
         projectRootFile = "flake.nix";
-        programs.nixfmt.enable = true;
-        programs.shfmt.enable = true;
+        programs = {
+          nixfmt.enable = true;
+          shfmt.enable = true;
+          ruff-check.enable = true;
+          ruff-format.enable = true;
+        };
       };
     in
     {
@@ -70,7 +74,7 @@
 
         shellcheck = pkgs.runCommand "check-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
           cd ${src}
-          shellcheck --shell=bash yolo.sh tests/test-poc.sh
+          shellcheck --shell=bash yolo.sh
           touch $out
         '';
 
@@ -85,6 +89,28 @@
           statix check .
           touch $out
         '';
+
+        ruff = pkgs.runCommand "check-ruff" { nativeBuildInputs = [ pkgs.ruff ]; } ''
+          cd ${src}
+          RUFF_CACHE_DIR="$(mktemp -d)" ruff check tests/
+          touch $out
+        '';
+
+        mypy =
+          pkgs.runCommand "check-mypy"
+            {
+              nativeBuildInputs = [
+                (pkgs.python3.withPackages (ps: [
+                  ps.mypy
+                  ps.pytest
+                ]))
+              ];
+            }
+            ''
+              cd ${src}
+              mypy tests/
+              touch $out
+            '';
       };
 
       devShells.${system}.default = pkgs.mkShell {
@@ -92,6 +118,11 @@
           yolo
           pkgs.bubblewrap
           pkgs.just
+          (pkgs.python3.withPackages (ps: [
+            ps.pytest
+            ps.mypy
+          ]))
+          pkgs.ruff
         ];
       };
     };
