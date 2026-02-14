@@ -5,6 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+    llm-agents.url = "github:numtide/llm-agents.nix";
+    llm-agents.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -12,6 +14,7 @@
       self,
       nixpkgs,
       treefmt-nix,
+      llm-agents,
       ...
     }:
     let
@@ -24,7 +27,11 @@
         modules = [
           {
             nixpkgs.overlays = [
-              (final: _prev: { ralphex = final.callPackage ./pkgs/ralphex.nix { }; })
+              (final: _prev: {
+                # TODO: remove once https://github.com/NixOS/nixpkgs/pull/486323 is resolved
+                inherit (llm-agents.packages.${final.system}) codex;
+                ralphex = final.callPackage ./pkgs/ralphex.nix { };
+              })
             ];
           }
           ./sandbox.nix
