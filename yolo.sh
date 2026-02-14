@@ -75,6 +75,16 @@ run_sandbox() {
   local gh_data_dir="$data_dir/gh"
   mkdir -p "$gh_data_dir"
 
+  local wrapper=()
+  if [[ ${DIRENV_DIR:-} == "-$PWD" ]] && [[ -f "$PWD/.envrc" ]]; then
+    mkdir -p "$home_dir/.config/direnv"
+    local escaped_pwd="${PWD//\\/\\\\}"
+    escaped_pwd="${escaped_pwd//\"/\\\"}"
+    printf '[whitelist]\nprefix = [ "%s" ]\n' "$escaped_pwd" \
+      >"$home_dir/.config/direnv/direnv.toml"
+    wrapper=(direnv exec .)
+  fi
+
   bwrap \
     --ro-bind /nix/store /nix/store \
     --ro-bind /nix/var/nix/db /nix/var/nix/db \
@@ -111,7 +121,7 @@ run_sandbox() {
     --chdir "$PWD" \
     --die-with-parent \
     --new-session \
-    -- "$@"
+    -- "${wrapper[@]}" "$@"
 }
 
 usage() {

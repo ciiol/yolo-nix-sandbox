@@ -23,6 +23,7 @@ TOOLS = [
     "codex",
     "gemini",
     "ralphex",
+    "direnv",
 ]
 
 

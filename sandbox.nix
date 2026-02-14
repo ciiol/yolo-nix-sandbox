@@ -17,6 +17,10 @@
       enable = true;
       lfs.enable = true;
     };
+    direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+    };
     less.enable = true;
   };
 

@@ -9,17 +9,19 @@ Yolo is a bubblewrap-based sandbox for running commands in an isolated NixOS-lik
 ## Architecture
 
 - **`flake.nix`** - Nix flake that builds a NixOS system profile (`sandboxConfig`) and packages the `yolo` script with `@SANDBOX_PROFILE@` and `@SANDBOX_ETC@` placeholders replaced by Nix store paths. Uses treefmt-nix for `formatter` and `checks` outputs (including ruff and mypy for Python test code).
-- **`yolo.sh`** - Bash script (template) that generates minimal `/etc` files at runtime, then `exec`s into `bwrap` with namespace isolation (IPC, PID, UTS). The current working directory is bind-mounted read-write; home is a tmpfs.
+- **`sandbox.nix`** - NixOS module that defines the sandbox system profile: enabled programs (bash, git, direnv/nix-direnv), system packages, and nix settings.
+- **`yolo.sh`** - Bash script (template) that generates minimal `/etc` files at runtime, then `exec`s into `bwrap` with namespace isolation (IPC, PID, UTS). The current working directory is bind-mounted read-write; home is a tmpfs. When the host's direnv loaded the current directory's `.envrc` (`DIRENV_DIR` matches `-$PWD`), commands are wrapped with `direnv exec .` to load the project's dev shell inside the sandbox.
 - **`justfile`** - Task runner with targets: `check` (lint + test), `lint` (`nix flake check`), `fmt` (`nix fmt`), `test` (`pytest tests/ -v`).
 - **`pyproject.toml`** - Python tooling configuration for pytest, ruff, and mypy.
 - **`tests/`** - Pytest integration test suite:
-  - `conftest.py` — shared fixtures (`yolo_bin`, `yolo`, `yolo_cmd`, `yolo_with_state`)
+  - `conftest.py` — shared fixtures (`yolo_bin`, `yolo`, `yolo_cmd`, `yolo_with_state`, `yolo_with_direnv`)
   - `test_basic.py` — basic command execution and exit code propagation
   - `test_isolation.py` — environment, filesystem, and namespace isolation
   - `test_tools.py` — parameterized tool availability checks
   - `test_persistence.py` — state persistence across sandbox runs
   - `test_environment.py` — terminfo, locale, SSL, /etc, and nix integration
   - `test_subcommands.py` — subcommand dispatch and error handling
+  - `test_direnv.py` — direnv integration (devshell tool availability, sandbox tool preservation)
 
 ## Commands
 
