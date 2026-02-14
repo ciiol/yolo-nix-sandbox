@@ -20,8 +20,6 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
-      src = ./.;
-
       sandboxConfig = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
@@ -41,14 +39,19 @@
       sandboxProfile = sandboxConfig.config.system.path;
       sandboxEtc = sandboxConfig.config.system.build.etc;
 
+      sandbox-entrypoint = pkgs.writeShellApplication {
+        name = "sandbox-entrypoint";
+        text = builtins.readFile ./entrypoint.bash;
+      };
+
       yolo = pkgs.writeShellApplication {
         name = "yolo";
         runtimeInputs = [ pkgs.bubblewrap ];
         text =
           builtins.replaceStrings
-            [ "@SANDBOX_PROFILE@" "@SANDBOX_ETC@" ]
-            [ "${sandboxProfile}" "${sandboxEtc}" ]
-            (builtins.readFile ./yolo.sh);
+            [ "@SANDBOX_PROFILE@" "@SANDBOX_ETC@" "@SANDBOX_ENTRYPOINT@" ]
+            [ "${sandboxProfile}" "${sandboxEtc}" "${sandbox-entrypoint}" ]
+            (builtins.readFile ./yolo.bash);
       };
 
       treefmtEval = treefmt-nix.lib.evalModule pkgs {
@@ -56,13 +59,22 @@
         programs = {
           nixfmt.enable = true;
           shfmt.enable = true;
+          shellcheck.enable = true;
+          deadnix.enable = true;
+          statix.enable = true;
           ruff-check.enable = true;
           ruff-format.enable = true;
+          mypy = {
+            enable = true;
+            directories."tests" = {
+              directory = "tests";
+              extraPythonPackages = [ pkgs.python3Packages.pytest ];
+            };
+          };
         };
       };
 
       pythonWithPackages = pkgs.python3.withPackages (ps: [
-        ps.mypy
         ps.pytest
       ]);
     in
@@ -76,43 +88,6 @@
 
       checks.${system} = {
         formatting = treefmtEval.config.build.check self;
-
-        shellcheck = pkgs.runCommand "check-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
-          cd ${src}
-          shellcheck --shell=bash yolo.sh
-          touch $out
-        '';
-
-        deadnix = pkgs.runCommand "check-deadnix" { nativeBuildInputs = [ pkgs.deadnix ]; } ''
-          cd ${src}
-          deadnix --fail .
-          touch $out
-        '';
-
-        statix = pkgs.runCommand "check-statix" { nativeBuildInputs = [ pkgs.statix ]; } ''
-          cd ${src}
-          statix check .
-          touch $out
-        '';
-
-        ruff = pkgs.runCommand "check-ruff" { nativeBuildInputs = [ pkgs.ruff ]; } ''
-          cd ${src}
-          RUFF_CACHE_DIR="$(mktemp -d)" ruff check tests/
-          touch $out
-        '';
-
-        mypy =
-          pkgs.runCommand "check-mypy"
-            {
-              nativeBuildInputs = [
-                pythonWithPackages
-              ];
-            }
-            ''
-              cd ${src}
-              mypy tests/
-              touch $out
-            '';
       };
 
       devShells.${system}.default = pkgs.mkShell {

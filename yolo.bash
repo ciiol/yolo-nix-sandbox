@@ -75,20 +75,16 @@ run_sandbox() {
   local gh_data_dir="$data_dir/gh"
   mkdir -p "$gh_data_dir"
 
-  local wrapper=()
+  local entrypoint_args=()
   if [[ ${DIRENV_DIR:-} == "-$PWD" ]] && [[ -f "$PWD/.envrc" ]]; then
-    mkdir -p "$home_dir/.config/direnv"
-    local escaped_pwd="${PWD//\\/\\\\}"
-    escaped_pwd="${escaped_pwd//\"/\\\"}"
-    printf '[whitelist]\nprefix = [ "%s" ]\n' "$escaped_pwd" \
-      >"$home_dir/.config/direnv/direnv.toml"
-    wrapper=(direnv exec .)
+    entrypoint_args=(--direnv)
   fi
 
   bwrap \
     --ro-bind /nix/store /nix/store \
     --ro-bind /nix/var/nix/db /nix/var/nix/db \
     --bind /nix/var/nix/daemon-socket /nix/var/nix/daemon-socket \
+    --ro-bind @SANDBOX_PROFILE@ /run/current-system/sw \
     --bind "$etc_dir" /etc \
     --bind "$home_dir" "$home" \
     --proc /proc \
@@ -105,23 +101,15 @@ run_sandbox() {
     --bind "$ssh_config_dir/known_hosts" "$home/.ssh/known_hosts" \
     --bind "$ssh_config_dir/allowed_signers" "$home/.ssh/allowed_signers" \
     --clearenv \
-    --setenv PATH "@SANDBOX_PROFILE@/bin:@SANDBOX_PROFILE@/sbin" \
     --setenv HOME "$home" \
     --setenv USER "$user" \
-    --setenv SHELL "@SANDBOX_PROFILE@/bin/bash" \
-    --setenv TERM "xterm-256color" \
-    --setenv TERMINFO_DIRS "@SANDBOX_PROFILE@/share/terminfo" \
-    --setenv PAGER less \
-    --setenv LOCALE_ARCHIVE "@SANDBOX_PROFILE@/lib/locale/locale-archive" \
-    --setenv LANG "C.UTF-8" \
-    --setenv NIX_REMOTE daemon \
     --unshare-ipc \
     --unshare-pid \
     --unshare-uts \
     --chdir "$PWD" \
     --die-with-parent \
     --new-session \
-    -- "${wrapper[@]}" "$@"
+    -- @SANDBOX_ENTRYPOINT@/bin/sandbox-entrypoint "${entrypoint_args[@]}" "$@"
 }
 
 usage() {

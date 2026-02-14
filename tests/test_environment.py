@@ -16,14 +16,23 @@ def test_terminfo_dirs_set(yolo: Callable[..., subprocess.CompletedProcess[str]]
 
 
 def test_terminfo_database_exists(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
-    """The directory at $TERMINFO_DIRS exists."""
-    result = yolo("bash", "-c", 'test -d "$TERMINFO_DIRS" && echo EXISTS')
-    assert result.stdout.strip() == "EXISTS", "TERMINFO_DIRS directory should exist"
+    """At least one directory in $TERMINFO_DIRS exists."""
+    result = yolo(
+        "bash",
+        "-c",
+        'IFS=:; for d in $TERMINFO_DIRS; do [ -d "$d" ] && echo EXISTS && exit; done; echo MISSING',
+    )
+    assert result.stdout.strip() == "EXISTS", "At least one TERMINFO_DIRS entry should exist"
 
 
 def test_terminfo_xterm_entry(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
-    """$TERMINFO_DIRS/x/xterm file exists."""
-    result = yolo("bash", "-c", 'test -e "$TERMINFO_DIRS/x/xterm" && echo EXISTS')
+    """An xterm terminfo entry exists in one of the $TERMINFO_DIRS directories."""
+    cmd = (
+        "IFS=:; for d in $TERMINFO_DIRS; do"
+        ' [ -e "$d/x/xterm" ] && echo EXISTS && exit;'
+        " done; echo MISSING"
+    )
+    result = yolo("bash", "-c", cmd)
     assert result.stdout.strip() == "EXISTS", "xterm terminfo entry should exist"
 
 
@@ -34,9 +43,21 @@ def test_locale_archive_set(yolo: Callable[..., subprocess.CompletedProcess[str]
 
 
 def test_lang_is_utf8(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
-    """$LANG equals C.UTF-8."""
+    """$LANG equals C.UTF-8 (set by i18n.defaultLocale in sandbox.nix via set-environment)."""
     result = yolo("bash", "-c", 'echo "$LANG"')
     assert result.stdout.strip() == "C.UTF-8"
+
+
+def test_term_is_xterm_256color(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
+    """$TERM equals xterm-256color (set via environment.variables in sandbox.nix)."""
+    result = yolo("bash", "-c", 'echo "$TERM"')
+    assert result.stdout.strip() == "xterm-256color"
+
+
+def test_shell_is_bash(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
+    """$SHELL points to bash (set via environment.variables in sandbox.nix)."""
+    result = yolo("bash", "-c", 'echo "$SHELL"')
+    assert result.stdout.strip().endswith("/bash")
 
 
 def test_locale_no_warnings(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:

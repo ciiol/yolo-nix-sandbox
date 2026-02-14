@@ -72,7 +72,7 @@ def test_clearenv_only_expected_vars(
     yolo: Callable[..., subprocess.CompletedProcess[str]],
 ) -> None:
     """Only expected variables are set inside the sandbox, and all required vars are present."""
-    # Variables explicitly set by yolo via --setenv
+    # Variables that must always be present (set by --setenv or /etc/set-environment)
     required_vars = {
         "PATH",
         "HOME",
@@ -85,10 +85,33 @@ def test_clearenv_only_expected_vars(
         "LANG",
         "NIX_REMOTE",
     }
-    # required_vars + vars that may be set by the shell/environment
-    expected_vars = required_vars | {
-        "PWD",  # set automatically by bash/the shell
+    # NixOS set-environment exports additional vars beyond our required set
+    nixos_vars = {
+        "__NIXOS_SET_ENVIRONMENT_DONE",
+        "DIRENV_CONFIG",
+        "EDITOR",
+        "GTK_A11Y",
+        "GTK_PATH",
+        "INFOPATH",
+        "LESSKEYIN_SYSTEM",
+        "LIBEXEC_PATH",
+        "NIX_PATH",
+        "NIX_PROFILES",
+        "NIX_USER_PROFILE_DIR",
+        "NIXPKGS_CONFIG",
+        "NO_AT_BRIDGE",
+        "QTWEBKIT_PLUGIN_PATH",
+        "SSH_ASKPASS",
+        "TZDIR",
+        "XCURSOR_PATH",
+        "XDG_CONFIG_DIRS",
+        "XDG_DATA_DIRS",
     }
+    shell_vars = {
+        "PWD",
+        "SHLVL",
+    }
+    expected_vars = required_vars | nixos_vars | shell_vars
     result = yolo("env")
     actual_vars = set()
     for line in result.stdout.strip().splitlines():

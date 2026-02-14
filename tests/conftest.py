@@ -112,7 +112,7 @@ def yolo_with_direnv(
 ) -> Callable[..., subprocess.CompletedProcess[str]]:
     """Run commands inside the sandbox with direnv activation.
 
-    Sets DIRENV_DIR to trigger direnv detection in yolo.sh.
+    Sets DIRENV_DIR to trigger direnv detection in yolo.bash.
     Uses a longer timeout (120s) since the first nix eval in the sandbox may
     need to evaluate the flake.
     """

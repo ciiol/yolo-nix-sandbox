@@ -6,6 +6,8 @@
 {
   boot.isContainer = true;
 
+  i18n.defaultLocale = "C.UTF-8";
+
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "claude-code" ];
 
   programs = {
@@ -26,6 +28,8 @@
 
   environment = {
     enableAllTerminfo = true;
+    variables.TERM = "xterm-256color";
+    variables.SHELL = "/run/current-system/sw/bin/bash";
 
     systemPackages = with pkgs; [
       # Core
