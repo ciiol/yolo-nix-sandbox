@@ -60,6 +60,11 @@
           ruff-format.enable = true;
         };
       };
+
+      pythonWithPackages = pkgs.python3.withPackages (ps: [
+        ps.mypy
+        ps.pytest
+      ]);
     in
     {
       packages.${system} = {
@@ -100,10 +105,7 @@
           pkgs.runCommand "check-mypy"
             {
               nativeBuildInputs = [
-                (pkgs.python3.withPackages (ps: [
-                  ps.mypy
-                  ps.pytest
-                ]))
+                pythonWithPackages
               ];
             }
             ''
@@ -118,10 +120,7 @@
           yolo
           pkgs.bubblewrap
           pkgs.just
-          (pkgs.python3.withPackages (ps: [
-            ps.pytest
-            ps.mypy
-          ]))
+          pythonWithPackages
           pkgs.ruff
         ];
       };
