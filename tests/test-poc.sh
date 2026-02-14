@@ -72,7 +72,89 @@ check_contains "passwd has current user" "$(whoami)" "$YOLO" run cat /etc/passwd
 check_contains "ssl certs present" "BEGIN CERTIFICATE" "$YOLO" run bash -c "head -5 /etc/ssl/certs/ca-certificates.crt"
 
 # Nix daemon communication
-check "nix store ping" "$YOLO" run nix store ping
+check "nix store info" "$YOLO" run nix store info
+
+# Claude Code available
+check "claude binary available" "$YOLO" run bash -c "command -v claude"
+
+# Codex available
+check "codex binary available" "$YOLO" run bash -c "command -v codex"
+
+# Gemini CLI available
+check "gemini binary available" "$YOLO" run bash -c "command -v gemini"
+
+# Ralphex available
+check "ralphex binary available" "$YOLO" run bash -c "command -v ralphex"
+
+# Claude state persistence
+test_state_dir="$(mktemp -d)"
+export XDG_DATA_HOME="$test_state_dir"
+"$YOLO" run bash -c "echo persistence-marker > ~/.claude/marker"
+check_output "claude state persists" "persistence-marker" "$YOLO" run cat ~/.claude/marker
+rm -rf "$test_state_dir"
+unset XDG_DATA_HOME
+
+# Codex state persistence
+test_state_dir="$(mktemp -d)"
+export XDG_DATA_HOME="$test_state_dir"
+"$YOLO" run bash -c "echo codex-marker > ~/.codex/marker"
+check_output "codex state persists" "codex-marker" "$YOLO" run cat ~/.codex/marker
+rm -rf "$test_state_dir"
+unset XDG_DATA_HOME
+
+# Gemini state persistence
+test_state_dir="$(mktemp -d)"
+export XDG_DATA_HOME="$test_state_dir"
+"$YOLO" run bash -c "echo gemini-marker > ~/.gemini/marker"
+check_output "gemini state persists" "gemini-marker" "$YOLO" run cat ~/.gemini/marker
+rm -rf "$test_state_dir"
+unset XDG_DATA_HOME
+
+# Ralphex state persistence
+test_state_dir="$(mktemp -d)"
+export XDG_DATA_HOME="$test_state_dir"
+"$YOLO" run bash -c "mkdir -p ~/.config/ralphex && echo ralphex-marker > ~/.config/ralphex/marker"
+check_output "ralphex state persists" "ralphex-marker" "$YOLO" run cat ~/.config/ralphex/marker
+rm -rf "$test_state_dir"
+unset XDG_DATA_HOME
+
+# gh config persistence
+test_state_dir="$(mktemp -d)"
+export XDG_DATA_HOME="$test_state_dir"
+"$YOLO" run bash -c "echo gh-marker > ~/.config/gh/marker"
+check_output "gh config persists" "gh-marker" "$YOLO" run cat ~/.config/gh/marker
+rm -rf "$test_state_dir"
+unset XDG_DATA_HOME
+
+# Subcommands invoke correct binaries
+check_contains "yolo codex runs codex" "codex" "$YOLO" codex --help
+check_contains "yolo gemini runs gemini" "gemini" "$YOLO" gemini --help
+
+# Terminfo available
+# shellcheck disable=SC2016
+check "TERMINFO_DIRS set" "$YOLO" run bash -c 'test -n "$TERMINFO_DIRS"'
+# shellcheck disable=SC2016
+check "terminfo database exists" "$YOLO" run bash -c 'test -d "$TERMINFO_DIRS"'
+# shellcheck disable=SC2016
+check "terminfo entry for xterm" "$YOLO" run bash -c 'test -e "$TERMINFO_DIRS/x/xterm"'
+
+# Locale support
+# shellcheck disable=SC2016
+check "LOCALE_ARCHIVE set" "$YOLO" run bash -c 'test -n "$LOCALE_ARCHIVE"'
+# shellcheck disable=SC2016
+check_output "LANG is C.UTF-8" "C.UTF-8" "$YOLO" run bash -c 'echo $LANG'
+# shellcheck disable=SC2016
+check "locale runs without warnings" "$YOLO" run bash -c 'test -z "$(locale 2>&1 >/dev/null)"'
+
+# Base tools available
+check "jq available" "$YOLO" run bash -c "command -v jq"
+check "rg available" "$YOLO" run bash -c "command -v rg"
+check "fd available" "$YOLO" run bash -c "command -v fd"
+check "gh available" "$YOLO" run bash -c "command -v gh"
+check "make available" "$YOLO" run bash -c "command -v make"
+check "ssh available" "$YOLO" run bash -c "command -v ssh"
+check "less available" "$YOLO" run bash -c "command -v less"
+check "tar available" "$YOLO" run bash -c "command -v tar"
 
 # Exit code propagation
 "$YOLO" run false

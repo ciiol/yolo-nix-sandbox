@@ -23,27 +23,11 @@
         inherit system;
         modules = [
           {
-            boot.isContainer = true;
-
-            environment.systemPackages = with pkgs; [
-              coreutils
-              bashInteractive
-              gnugrep
-              gnused
-              findutils
-              git
-              nix
-              cacert
-              curl
+            nixpkgs.overlays = [
+              (final: _prev: { ralphex = final.callPackage ./pkgs/ralphex.nix { }; })
             ];
-
-            nix.settings.experimental-features = [
-              "nix-command"
-              "flakes"
-            ];
-
-            system.stateVersion = "26.05";
           }
+          ./sandbox.nix
         ];
       };
 

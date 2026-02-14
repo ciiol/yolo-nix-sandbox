@@ -34,7 +34,6 @@ build_etc() {
 }
 
 run_sandbox() {
-  local tmpdir
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
 
@@ -42,25 +41,69 @@ run_sandbox() {
   mkdir "$etc_dir"
   build_etc "$etc_dir"
 
+  local home_dir="$tmpdir/home"
+  mkdir "$home_dir"
+
   local user home
   user="$(id -un)"
   home="/home/$user"
 
-  exec bwrap \
+  local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/yolo"
+
+  local git_config_dir="$data_dir/git"
+  mkdir -p "$git_config_dir"
+
+  local ssh_config_dir="$data_dir/ssh"
+  mkdir -p "$ssh_config_dir"
+  touch "$ssh_config_dir/known_hosts"
+  touch "$ssh_config_dir/allowed_signers"
+
+  local claude_data_dir="$data_dir/claude"
+  mkdir -p "$claude_data_dir"
+  touch "$claude_data_dir/.claude.json"
+  ln -s .claude/.claude.json "$home_dir/.claude.json"
+
+  local codex_data_dir="$data_dir/codex"
+  mkdir -p "$codex_data_dir"
+
+  local gemini_data_dir="$data_dir/gemini"
+  mkdir -p "$gemini_data_dir"
+
+  local ralphex_data_dir="$data_dir/ralphex"
+  mkdir -p "$ralphex_data_dir"
+
+  local gh_data_dir="$data_dir/gh"
+  mkdir -p "$gh_data_dir"
+
+  bwrap \
     --ro-bind /nix/store /nix/store \
     --ro-bind /nix/var/nix/db /nix/var/nix/db \
     --bind /nix/var/nix/daemon-socket /nix/var/nix/daemon-socket \
-    --ro-bind "$etc_dir" /etc \
+    --bind "$etc_dir" /etc \
+    --bind "$home_dir" "$home" \
     --proc /proc \
     --dev /dev \
     --tmpfs /tmp \
-    --tmpfs "$home" \
     --bind "$PWD" "$PWD" \
+    --bind "$claude_data_dir" "$home/.claude" \
+    --bind "$codex_data_dir" "$home/.codex" \
+    --bind "$gemini_data_dir" "$home/.gemini" \
+    --bind "$ralphex_data_dir" "$home/.config/ralphex" \
+    --bind "$gh_data_dir" "$home/.config/gh" \
+    --ro-bind "$git_config_dir" "$home/.config/git" \
+    --ro-bind "$ssh_config_dir" "$home/.ssh" \
+    --bind "$ssh_config_dir/known_hosts" "$home/.ssh/known_hosts" \
+    --bind "$ssh_config_dir/allowed_signers" "$home/.ssh/allowed_signers" \
+    --clearenv \
     --setenv PATH "@SANDBOX_PROFILE@/bin:@SANDBOX_PROFILE@/sbin" \
     --setenv HOME "$home" \
     --setenv USER "$user" \
-    --setenv TERM "${TERM:-xterm}" \
-    --setenv LANG "${LANG:-C.UTF-8}" \
+    --setenv SHELL "@SANDBOX_PROFILE@/bin/bash" \
+    --setenv TERM "xterm-256color" \
+    --setenv TERMINFO_DIRS "@SANDBOX_PROFILE@/share/terminfo" \
+    --setenv PAGER less \
+    --setenv LOCALE_ARCHIVE "@SANDBOX_PROFILE@/lib/locale/locale-archive" \
+    --setenv LANG "C.UTF-8" \
     --setenv NIX_REMOTE daemon \
     --unshare-ipc \
     --unshare-pid \
@@ -72,14 +115,37 @@ run_sandbox() {
 }
 
 usage() {
-  echo "Usage: yolo run <cmd> [args...]"
+  echo "Usage: yolo <run|claude|codex|gemini|ralphex> [args...]"
   exit 1
 }
 
-if [[ $# -lt 2 ]] || [[ $1 != "run" ]]; then
+if [[ $# -lt 1 ]]; then
   usage
 fi
 
-shift # remove "run"
+cmd="$1"
+shift
 
-run_sandbox "$@"
+case "$cmd" in
+run)
+  if [[ $# -lt 1 ]]; then
+    usage
+  fi
+  run_sandbox "$@"
+  ;;
+claude)
+  run_sandbox claude --dangerously-skip-permissions "$@"
+  ;;
+codex)
+  run_sandbox codex --yolo "$@"
+  ;;
+gemini)
+  run_sandbox gemini --yolo "$@"
+  ;;
+ralphex)
+  run_sandbox ralphex "$@"
+  ;;
+*)
+  usage
+  ;;
+esac
