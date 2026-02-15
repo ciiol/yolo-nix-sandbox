@@ -99,3 +99,16 @@ def test_passwd_contains_current_user(
     result = yolo("bash", "-c", 'grep -c "^$USER:" /etc/passwd')
     count = int(result.stdout.strip())
     assert count >= 1, "/etc/passwd should contain the current username"
+
+
+def test_uv_config_content(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
+    """/etc/uv/uv.toml contains the only-system python preference."""
+    result = yolo("cat", "/etc/uv/uv.toml")
+    assert 'python-preference = "only-system"' in result.stdout
+
+
+def test_man_page_lookup(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
+    """man can locate a specific page, confirming man pages and caches are available."""
+    result = yolo("man", "-w", "bash", check=False)
+    assert result.returncode == 0, f"man -w bash failed: {result.stderr}"
+    assert result.stdout.strip(), "man -w bash should return a path"

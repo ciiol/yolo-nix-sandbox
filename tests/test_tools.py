@@ -24,6 +24,12 @@ TOOLS = [
     "gemini",
     "ralphex",
     "direnv",
+    "man",
+    "dig",
+    "sqlite3",
+    "psql",
+    "uv",
+    "python3",
 ]
 
 

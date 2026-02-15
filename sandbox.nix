@@ -6,6 +6,11 @@
 {
   boot.isContainer = true;
 
+  documentation.man = {
+    enable = true;
+    generateCaches = true;
+  };
+
   i18n.defaultLocale = "C.UTF-8";
 
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "claude-code" ];
@@ -29,6 +34,14 @@
   environment = {
     variables.TERM = "xterm-256color";
     variables.SHELL = "/run/current-system/sw/bin/bash";
+
+    etc."uv/uv.toml".source =
+      let
+        tomlFormat = pkgs.formats.toml { };
+      in
+      tomlFormat.generate "uv-config" {
+        python-preference = "only-system";
+      };
 
     systemPackages = with pkgs; [
       # Core
@@ -79,6 +92,33 @@
 
       # Network
       wget
+      dnsutils
+
+      # Database clients
+      sqlite
+      postgresql
+
+      # Package management
+      uv
+
+      # Python (scientific/data)
+      (python3.withPackages (
+        ps: with ps; [
+          numpy
+          pandas
+          scipy
+          matplotlib
+          requests
+          beautifulsoup4
+          lxml
+          scikit-learn
+          sympy
+          pillow
+          openpyxl
+          pyyaml
+          httpx
+        ]
+      ))
     ];
   };
 
