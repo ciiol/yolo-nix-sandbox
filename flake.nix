@@ -37,13 +37,6 @@
             mdformat.enable = true;
             ruff-check.enable = true;
             ruff-format.enable = true;
-            mypy = {
-              enable = true;
-              directories."tests" = {
-                directory = "tests";
-                extraPythonPackages = [ pkgs.python3Packages.pytest ];
-              };
-            };
           };
         };
     in

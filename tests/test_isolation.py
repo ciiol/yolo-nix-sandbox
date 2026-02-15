@@ -1,18 +1,12 @@
 """Isolation and security boundary tests for the yolo sandbox."""
 
-from __future__ import annotations
-
 import os
 import subprocess
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
-def test_home_is_isolated(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
+def test_home_is_isolated(yolo):
     """Sandbox home contains only the expected directories, nothing from the host."""
     result = yolo("bash", "-c", "ls -1a $HOME")
     actual = set(result.stdout.strip().splitlines())
@@ -30,7 +24,7 @@ def test_home_is_isolated(yolo: Callable[..., subprocess.CompletedProcess[str]])
     assert actual == expected, f"Unexpected home contents: {actual - expected}"
 
 
-def test_project_dir_is_rw(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
+def test_project_dir_is_rw(yolo):
     """Can create, read, and delete a file in the project directory."""
     marker = f".yolo-test-rw-{uuid.uuid4().hex[:8]}"
     marker_path = Path.cwd() / marker
@@ -46,9 +40,7 @@ def test_project_dir_is_rw(yolo: Callable[..., subprocess.CompletedProcess[str]]
             marker_path.unlink()
 
 
-def test_host_env_vars_do_not_leak(
-    yolo_bin: str,
-) -> None:
+def test_host_env_vars_do_not_leak(yolo_bin):
     """A canary env var set on the host is not visible inside the sandbox."""
     canary = f"YOLO_TEST_CANARY_{uuid.uuid4().hex[:8]}"
     env = {k: v for k, v in os.environ.items() if not k.startswith("DIRENV_")}
@@ -64,9 +56,7 @@ def test_host_env_vars_do_not_leak(
     assert result.stdout.strip() == "NOTSET"
 
 
-def test_clearenv_only_expected_vars(
-    yolo: Callable[..., subprocess.CompletedProcess[str]],
-) -> None:
+def test_clearenv_only_expected_vars(yolo):
     """Only expected variables are set inside the sandbox, and all required vars are present."""
     # Variables that must always be present (set by --setenv or /etc/set-environment)
     required_vars = {
@@ -120,17 +110,13 @@ def test_clearenv_only_expected_vars(
     assert not unexpected, f"Unexpected env vars in sandbox: {unexpected}"
 
 
-def test_cannot_write_nix_store(
-    yolo: Callable[..., subprocess.CompletedProcess[str]],
-) -> None:
+def test_cannot_write_nix_store(yolo):
     """Writing to /nix/store fails inside the sandbox (read-only bind mount)."""
     result = yolo("touch", "/nix/store/yolo-test-file", check=False)
     assert result.returncode != 0
 
 
-def test_host_tmp_not_visible(
-    yolo_bin: str,
-) -> None:
+def test_host_tmp_not_visible(yolo_bin):
     """A marker file in host /tmp is not visible inside the sandbox."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("DIRENV_")}
     marker_name = f".yolo-test-tmp-{uuid.uuid4().hex[:8]}"
@@ -152,17 +138,13 @@ def test_host_tmp_not_visible(
             marker_path.unlink()
 
 
-def test_tmp_is_writable(
-    yolo: Callable[..., subprocess.CompletedProcess[str]],
-) -> None:
+def test_tmp_is_writable(yolo):
     """Can create files in /tmp inside the sandbox."""
     result = yolo("bash", "-c", "echo ok > /tmp/yolo-test && cat /tmp/yolo-test")
     assert result.stdout.strip() == "ok"
 
 
-def test_pid_namespace_isolated(
-    yolo: Callable[..., subprocess.CompletedProcess[str]],
-) -> None:
+def test_pid_namespace_isolated(yolo):
     """PID namespace is isolated: PID 1 exists and ps output is minimal."""
     result = yolo("bash", "-c", "test -d /proc/1 && echo EXISTS")
     assert result.stdout.strip() == "EXISTS"
@@ -174,9 +156,7 @@ def test_pid_namespace_isolated(
     )
 
 
-def test_project_dir_writes_visible_on_host(
-    yolo: Callable[..., subprocess.CompletedProcess[str]],
-) -> None:
+def test_project_dir_writes_visible_on_host(yolo):
     """A file created inside the sandbox in the project dir is visible on the host."""
     marker = f".yolo-test-host-visible-{uuid.uuid4().hex[:8]}"
     marker_path = Path.cwd() / marker
