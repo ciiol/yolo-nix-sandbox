@@ -27,12 +27,12 @@
   };
 
   environment = {
-    enableAllTerminfo = true;
     variables.TERM = "xterm-256color";
     variables.SHELL = "/run/current-system/sw/bin/bash";
 
     systemPackages = with pkgs; [
       # Core
+      ncurses
       coreutils
       bashInteractive
       gnugrep
