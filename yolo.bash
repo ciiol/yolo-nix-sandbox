@@ -108,7 +108,6 @@ run_sandbox() {
     --unshare-uts \
     --chdir "$PWD" \
     --die-with-parent \
-    --new-session \
     -- @SANDBOX_ENTRYPOINT@/bin/sandbox-entrypoint "${entrypoint_args[@]}" "$@"
 }
 

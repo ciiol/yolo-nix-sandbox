@@ -18,7 +18,7 @@ Yolo is a bubblewrap-based sandbox for running commands in an isolated NixOS-lik
 - **`tests/`** - Pytest integration test suite:
   - `conftest.py` — shared fixtures (`yolo_bin`, `yolo`, `yolo_cmd`, `yolo_with_state`, `yolo_with_direnv`)
   - `test_basic.py` — basic command execution and exit code propagation
-  - `test_isolation.py` — environment, filesystem, and namespace isolation
+  - `test_isolation.py` — environment, filesystem, namespace isolation, signal propagation, and security boundaries
   - `test_tools.py` — parameterized tool availability checks
   - `test_persistence.py` — state persistence across sandbox runs
   - `test_environment.py` — terminfo, locale, SSL, /etc, man pages, uv config, and nix integration
