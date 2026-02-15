@@ -32,7 +32,7 @@ nix run github:ciiol/yolo-nix-sandbox -- run git status
 
 ## Installation
 
-### Home Manager (flake)
+### NixOS with Home Manager (flake)
 
 Add yolo as a flake input and enable the Home Manager module:
 
@@ -42,20 +42,35 @@ Add yolo as a flake input and enable the Home Manager module:
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
     yolo.url = "github:ciiol/yolo-nix-sandbox";
+    yolo.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { nixpkgs, home-manager, yolo, ... }: {
-    homeConfigurations."user" = home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      modules = [
-        yolo.homeManagerModules.default
-        {
-          programs.yolo.enable = true;
-        }
-      ];
+  outputs =
+    {
+      nixpkgs,
+      home-manager,
+      yolo,
+      ...
+    }:
+    {
+      nixosConfigurations.hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.sharedModules = [ yolo.homeManagerModules.default ];
+            home-manager.users.jdoe = {
+              programs.yolo.enable = true;
+            };
+          }
+        ];
+      };
     };
-  };
 }
 ```
 
