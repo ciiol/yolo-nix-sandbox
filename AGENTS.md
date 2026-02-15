@@ -8,10 +8,11 @@ Yolo is a bubblewrap-based sandbox for running commands in an isolated NixOS-lik
 
 ## Architecture
 
-- **`flake.nix`** - Nix flake that builds a NixOS system profile (`sandboxConfig`) and packages the `yolo` script (with `@SANDBOX_PROFILE@`, `@SANDBOX_ETC@`, and `@SANDBOX_ENTRYPOINT@` placeholders replaced by Nix store paths) and the `sandbox-entrypoint` script (as a plain `writeShellApplication`). Uses treefmt-nix for `formatter` and `checks` outputs — all linters (nixfmt, shfmt, shellcheck, deadnix, statix, ruff-check, ruff-format, mypy) are configured as treefmt-nix programs with auto-discovery.
+- **`flake.nix`** - Nix flake with self-contained output blocks. The `packages` block builds a NixOS system profile (`sandboxConfig`) and packages the `yolo` script (with `@SANDBOX_PROFILE@`, `@SANDBOX_ETC@`, and `@SANDBOX_ENTRYPOINT@` placeholders replaced by Nix store paths) and the `sandbox-entrypoint` script (as a plain `writeShellApplication`), exporting only `packages.default = yolo`. A shared `treefmtEval` function (in the top-level `let`) is called from both `formatter` and `checks` outputs — all linters (nixfmt, shfmt, shellcheck, deadnix, statix, mdformat, ruff-check, ruff-format, mypy) are configured as treefmt-nix programs with auto-discovery. Also exports `devShells.default` (just, pytest) and `homeManagerModules.default` (imports the HM module with the flake's `yolo` as the default package).
 - **`sandbox.nix`** - NixOS module that defines the sandbox system profile: enabled programs (bash, git, direnv/nix-direnv), system packages, environment variables (TERM, SHELL), and nix settings. Most environment variables (PATH, LANG, PAGER, NIX_REMOTE, TERMINFO_DIRS, LOCALE_ARCHIVE) are set automatically by NixOS modules and exported via `/etc/set-environment`.
 - **`entrypoint.bash`** - Sandbox entrypoint script that sources `/etc/set-environment` to set up the environment, then either wraps the command with `direnv exec .` (when `--direnv` flag is passed) or directly execs it. Packaged as `sandbox-entrypoint` and referenced via its direct Nix store path (`@SANDBOX_ENTRYPOINT@`), not through the system profile.
 - **`yolo.bash`** - Bash script (template) that generates minimal `/etc` files at runtime, then `exec`s into `bwrap` with namespace isolation (IPC, PID, UTS). The sandbox profile is bind-mounted to `/run/current-system/sw` so NixOS profile-relative paths resolve correctly. Uses `--clearenv` with only HOME and USER as `--setenv` flags; all other environment variables are set by `sandbox-entrypoint` sourcing `/etc/set-environment`. The current working directory is bind-mounted read-write; home is a tmpfs. When the host's direnv loaded the current directory's `.envrc` (`DIRENV_DIR` matches `-$PWD`), the entrypoint is invoked with `--direnv` to load the project's dev shell inside the sandbox.
+- **`modules/home-manager.nix`** - Home Manager module providing `programs.yolo.enable` and `programs.yolo.package` options. When enabled, adds the yolo package to `home.packages`. The flake's `homeManagerModules.default` wraps this module and sets the default package via `self.packages`.
 - **`justfile`** - Task runner with targets: `check` (lint + test), `lint` (`nix flake check`), `fmt` (`nix fmt`), `test` (`pytest tests/ -v`).
 - **`pyproject.toml`** - Python tooling configuration for pytest, ruff, and mypy.
 - **`tests/`** - Pytest integration test suite:
@@ -26,39 +27,45 @@ Yolo is a bubblewrap-based sandbox for running commands in an isolated NixOS-lik
 
 ## Commands
 
-Enter the dev shell (provides `yolo`, `just`):
+Enter the dev shell (provides `just`, `pytest`):
+
 ```
 nix develop
 ```
 
 Run all checks (lint + test):
+
 ```
 just check
 ```
 
 Lint (runs `nix flake check` — all linters via treefmt-nix):
+
 ```
 just lint
 ```
 
 Format code (runs `nix fmt` — all formatters and linters via treefmt-nix):
+
 ```
 just fmt
 ```
 
 Run tests:
+
 ```
 just test          # runs pytest tests/ -v
 ```
 
 Run a command in the sandbox:
+
 ```
 yolo run <cmd> [args...]
 ```
 
 ## Key Constraints
 
-- x86_64-linux only (hardcoded in flake.nix)
+- Linux only (x86_64 and aarch64)
 - Tests require a running Nix daemon, bwrap user namespaces, and network access
 - The `yolo.bash` script is a template: `@SANDBOX_PROFILE@`, `@SANDBOX_ETC@`, and `@SANDBOX_ENTRYPOINT@` are replaced at build time by `writeShellApplication` in flake.nix, so the raw script cannot be run directly
 

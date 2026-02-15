@@ -12,11 +12,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def _env_without_direnv() -> dict[str, str]:
-    """Return a copy of os.environ with all DIRENV_* variables removed."""
-    return {k: v for k, v in os.environ.items() if not k.startswith("DIRENV_")}
-
-
 def test_home_is_isolated(yolo: Callable[..., subprocess.CompletedProcess[str]]) -> None:
     """Sandbox home contains only the expected directories, nothing from the host."""
     result = yolo("bash", "-c", "ls -1a $HOME")
@@ -56,7 +51,8 @@ def test_host_env_vars_do_not_leak(
 ) -> None:
     """A canary env var set on the host is not visible inside the sandbox."""
     canary = f"YOLO_TEST_CANARY_{uuid.uuid4().hex[:8]}"
-    env = {**_env_without_direnv(), canary: "leaked"}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("DIRENV_")}
+    env[canary] = "leaked"
     result = subprocess.run(
         [yolo_bin, "run", "bash", "-c", f"echo ${{{canary}:-NOTSET}}"],
         capture_output=True,
@@ -136,7 +132,7 @@ def test_host_tmp_not_visible(
     yolo_bin: str,
 ) -> None:
     """A marker file in host /tmp is not visible inside the sandbox."""
-    env = _env_without_direnv()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("DIRENV_")}
     marker_name = f".yolo-test-tmp-{uuid.uuid4().hex[:8]}"
     marker_path = Path(f"/tmp/{marker_name}")
     try:
