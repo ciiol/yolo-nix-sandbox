@@ -22,6 +22,10 @@ TOOLS = [
     "psql",
     "uv",
     "python3",
+    "podman",
+    "podman-compose",
+    "docker",
+    "busybox",
 ]
 
 

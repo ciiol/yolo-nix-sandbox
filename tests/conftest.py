@@ -1,12 +1,56 @@
 """Shared pytest fixtures for yolo sandbox integration tests."""
 
 import os
+import pwd
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _get_subid_count(path, user):
+    """Return subid count for the last matching entry, or None."""
+    p = Path(path)
+    if not p.exists():
+        return None
+    for line in reversed(p.read_text().splitlines()):
+        parts = line.split(":")
+        if len(parts) == 3 and parts[0] == user:
+            return int(parts[2])
+    return None
+
+
+def _host_has_wide_uid():
+    """Check if the host has wide-UID support, matching has_wide_uid_support() in yolo.bash."""
+    user = pwd.getpwuid(os.getuid()).pw_name
+    uid = os.getuid()
+    gid = os.getgid()
+
+    uid_count = _get_subid_count("/etc/subuid", user)
+    gid_count = _get_subid_count("/etc/subgid", user)
+    if uid_count is None or gid_count is None:
+        return False
+
+    if not (shutil.which("newuidmap") and shutil.which("newgidmap")):
+        return False
+
+    return uid >= 2 and gid >= 2 and uid < uid_count and gid < gid_count
+
+
+@pytest.fixture(scope="session")
+def wide_uid():
+    """Session-scoped fixture: True if host has wide-UID prerequisites."""
+    return _host_has_wide_uid()
+
+
+@pytest.fixture
+def requires_wide_uid(wide_uid):
+    """Skip the test if the host lacks wide-UID support."""
+    if not wide_uid:
+        pytest.skip("host lacks wide-UID support (subuid/subgid/newuidmap/newgidmap)")
 
 
 def _env_without_direnv():
@@ -41,14 +85,14 @@ def yolo(yolo_bin):
     """
     env = _env_without_direnv()
 
-    def run(*args, check=True):
+    def run(*args, check=True, timeout=60):
         return subprocess.run(
             [yolo_bin, "run", *args],
             capture_output=True,
             text=True,
             check=check,
             env=env,
-            timeout=60,
+            timeout=timeout,
         )
 
     return run
@@ -62,14 +106,14 @@ def yolo_cmd(yolo_bin):
     """
     env = _env_without_direnv()
 
-    def run(*args, check=True):
+    def run(*args, check=True, timeout=60):
         return subprocess.run(
             [yolo_bin, *args],
             capture_output=True,
             text=True,
             check=check,
             env=env,
-            timeout=60,
+            timeout=timeout,
         )
 
     return run
@@ -92,7 +136,7 @@ def yolo_with_state(yolo_bin, tmp_path):
             text=True,
             check=check,
             env=env,
-            timeout=60,
+            timeout=120,
         )
 
     return run

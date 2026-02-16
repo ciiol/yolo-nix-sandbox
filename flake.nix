@@ -71,7 +71,10 @@
 
           yolo = pkgs.writeShellApplication {
             name = "yolo";
-            runtimeInputs = [ pkgs.bubblewrap ];
+            runtimeInputs = [
+              pkgs.bubblewrap
+              pkgs.util-linux
+            ];
             text =
               builtins.replaceStrings
                 [ "@SANDBOX_PROFILE@" "@SANDBOX_ETC@" "@SANDBOX_ENTRYPOINT@" ]

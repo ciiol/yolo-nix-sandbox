@@ -47,6 +47,7 @@
       # Core
       ncurses
       coreutils
+      pkgsStatic.busybox
       bashInteractive
       gnugrep
       gnused
@@ -98,6 +99,9 @@
       sqlite
       postgresql
 
+      # Containers
+      podman-compose
+
       # Package management
       uv
 
@@ -126,6 +130,16 @@
     "nix-command"
     "flakes"
   ];
+
+  virtualisation.containers = {
+    enable = true;
+    containersConf.settings.engine.cgroup_manager = "cgroupfs";
+  };
+
+  virtualisation.podman = {
+    enable = true;
+    dockerCompat = true;
+  };
 
   system.stateVersion = "26.05";
 }

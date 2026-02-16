@@ -20,7 +20,17 @@ def test_home_is_isolated(yolo):
     """Sandbox home contains only the expected directories, nothing from the host."""
     result = yolo("bash", "-c", "ls -1a $HOME")
     actual = set(result.stdout.strip().splitlines())
-    expected = {".", "..", ".claude", ".claude.json", ".codex", ".gemini", ".config", ".ssh"}
+    expected = {
+        ".",
+        "..",
+        ".claude",
+        ".claude.json",
+        ".codex",
+        ".gemini",
+        ".config",
+        ".ssh",
+        ".local",
+    }
     # The project dir bind-mount may create intermediate dirs under $HOME
     # (e.g. "dev" if $PWD is /home/user/dev/...).
     cwd = Path.cwd()
@@ -79,6 +89,7 @@ def test_clearenv_only_expected_vars(yolo):
         "LOCALE_ARCHIVE",
         "LANG",
         "NIX_REMOTE",
+        "XDG_RUNTIME_DIR",
     }
     # NixOS set-environment exports additional vars beyond our required set
     nixos_vars = {

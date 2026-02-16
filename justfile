@@ -9,4 +9,4 @@ fmt:
     nix fmt
 
 test:
-    pytest tests/ -v
+    pytest tests/

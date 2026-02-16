@@ -13,8 +13,7 @@ project directory.
 - **Ephemeral by default** — home directory is temporary, environment variables are cleared
   and rebuilt from a NixOS profile. Each run starts clean.
 - **Selective state persistence** — specific config directories survive across
-  sessions via `$XDG_DATA_HOME/yolo/`: git config, SSH known hosts and allowed
-  signers, GitHub CLI auth, and AI coding agent state.
+  sessions via `$XDG_DATA_HOME/yolo/`: AI agent state, auth, OCI images, etc.
 
 ## Quick Start
 
@@ -74,6 +73,20 @@ Add yolo as a flake input and enable the Home Manager module:
 }
 ```
 
+### Enabling Podman
+
+To enable Podman, you need to configure subordinate user and group ID ranges for your user.
+
+```nix
+# configuration.nix
+{
+  users.users.jdoe = {
+    subUidRanges = [{ startUid = 100000; count = 65536; }];
+    subGidRanges = [{ startGid = 100000; count = 65536; }];
+  };
+}
+```
+
 ## Usage
 
 Yolo provides several subcommands:
@@ -130,6 +143,6 @@ just test    # Run pytest tests/ -v
 
 ## Requirements
 
-- Linux only (x86_64 and aarch64)
+- Linux only
 - Running Nix daemon
-- User namespaces enabled (for bubblewrap)
+- User namespaces enabled

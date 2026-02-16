@@ -8,6 +8,7 @@ PERSISTENCE_CASES = [
     ("gemini", "~/.gemini/marker"),
     ("ralphex", "~/.config/ralphex/marker"),
     ("gh", "~/.config/gh/marker"),
+    ("containers", "~/.local/share/containers/marker"),
 ]
 
 
