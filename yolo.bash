@@ -203,7 +203,11 @@ run_sandbox() {
 
   local entrypoint_args=()
   if [[ ${DIRENV_DIR:-} == "-$PWD" ]] && [[ -f "$PWD/.envrc" ]]; then
-    entrypoint_args=(--direnv)
+    local allowed
+    allowed=$(direnv status --json 2>/dev/null | jq -r '.state.foundRC.allowed // empty') || allowed=""
+    if [[ $allowed == "0" ]]; then
+      entrypoint_args=(--direnv)
+    fi
   fi
 
   local wide_uid=false

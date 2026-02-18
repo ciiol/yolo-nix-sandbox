@@ -103,7 +103,7 @@ The sandbox mounts the current working directory read-write, so your project
 files are accessible. The home directory is isolated, and IPC, PID, and
 UTS namespaces are unshared.
 
-If the host's direnv has loaded the current directory's `.envrc`, yolo
+If the host's direnv has allowed the current directory's `.envrc`, yolo
 automatically activates the project's dev shell inside the sandbox.
 
 ## Security Model

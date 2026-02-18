@@ -8,7 +8,8 @@ set -u
 if [[ ${1:-} == "--direnv" ]]; then
   shift
   direnv allow .
-  exec direnv exec . "$@"
+  # shellcheck source=/dev/null
+  source <(direnv export bash)
 fi
 
 exec "$@"

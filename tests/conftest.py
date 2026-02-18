@@ -143,14 +143,92 @@ def yolo_with_state(yolo_bin, tmp_path):
 
 
 @pytest.fixture
-def yolo_with_direnv(yolo_bin):
+def yolo_with_direnv(yolo_bin, tmp_path):
     """Run commands inside the sandbox with direnv activation.
 
-    Sets DIRENV_DIR to trigger direnv detection in yolo.bash.
-    Uses a longer timeout (120s) since the first nix eval in the sandbox may
-    need to evaluate the flake.
+    Sets DIRENV_DIR to trigger direnv detection and creates a proper "allowed"
+    state via ``direnv allow .`` with an isolated XDG_DATA_HOME so the host's
+    allow database is not consulted.
     """
-    env = {**_env_without_direnv(), "DIRENV_DIR": f"-{PROJECT_ROOT}"}
+    state_dir = tmp_path / "direnv-allowed"
+    state_dir.mkdir()
+    allow_env = {**os.environ, "XDG_DATA_HOME": str(state_dir)}
+    subprocess.run(
+        ["direnv", "allow", "."],
+        cwd=PROJECT_ROOT,
+        env=allow_env,
+        check=True,
+        capture_output=True,
+    )
+    env = {
+        **_env_without_direnv(),
+        "DIRENV_DIR": f"-{PROJECT_ROOT}",
+        "XDG_DATA_HOME": str(state_dir),
+    }
+
+    def run(*args, check=True):
+        return subprocess.run(
+            [yolo_bin, "run", *args],
+            capture_output=True,
+            text=True,
+            check=check,
+            env=env,
+            timeout=120,
+        )
+
+    return run
+
+
+@pytest.fixture
+def yolo_with_direnv_denied(yolo_bin, tmp_path):
+    """Run commands inside the sandbox with direnv detection but .envrc explicitly denied.
+
+    Uses a fresh XDG_DATA_HOME and runs ``direnv deny .`` so direnv records
+    AllowStatus 2 (Denied) for the project .envrc.
+    """
+    state_dir = tmp_path / "direnv-denied"
+    state_dir.mkdir()
+    deny_env = {**os.environ, "XDG_DATA_HOME": str(state_dir)}
+    subprocess.run(
+        ["direnv", "deny", "."],
+        cwd=PROJECT_ROOT,
+        env=deny_env,
+        check=True,
+        capture_output=True,
+    )
+    env = {
+        **_env_without_direnv(),
+        "DIRENV_DIR": f"-{PROJECT_ROOT}",
+        "XDG_DATA_HOME": str(state_dir),
+    }
+
+    def run(*args, check=True):
+        return subprocess.run(
+            [yolo_bin, "run", *args],
+            capture_output=True,
+            text=True,
+            check=check,
+            env=env,
+            timeout=120,
+        )
+
+    return run
+
+
+@pytest.fixture
+def yolo_with_direnv_not_allowed(yolo_bin, tmp_path):
+    """Run commands inside the sandbox with direnv detection but .envrc NOT allowed.
+
+    Uses a fresh XDG_DATA_HOME so direnv has no allow/deny record for the .envrc,
+    resulting in AllowStatus 1 (NotAllowed).
+    """
+    state_dir = tmp_path / "direnv-not-allowed"
+    state_dir.mkdir()
+    env = {
+        **_env_without_direnv(),
+        "DIRENV_DIR": f"-{PROJECT_ROOT}",
+        "XDG_DATA_HOME": str(state_dir),
+    }
 
     def run(*args, check=True):
         return subprocess.run(

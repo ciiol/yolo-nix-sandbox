@@ -73,6 +73,8 @@
             name = "yolo";
             runtimeInputs = [
               pkgs.bubblewrap
+              pkgs.direnv
+              pkgs.jq
               pkgs.util-linux
             ];
             text =
@@ -106,6 +108,7 @@
         {
           default = pkgs.mkShell {
             packages = [
+              pkgs.direnv
               pkgs.just
               pythonWithPackages
             ];
