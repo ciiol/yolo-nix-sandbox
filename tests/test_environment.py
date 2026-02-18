@@ -1,5 +1,9 @@
 """Environment configuration tests for the yolo sandbox."""
 
+import os
+
+import pytest
+
 
 def test_terminfo_dirs_set(yolo):
     """$TERMINFO_DIRS is non-empty inside the sandbox."""
@@ -40,10 +44,32 @@ def test_lang_is_utf8(yolo):
     assert result.stdout.strip() == "C.UTF-8"
 
 
-def test_term_is_xterm_256color(yolo):
-    """$TERM equals xterm-256color (set via environment.variables in sandbox.nix)."""
+def test_term_matches_host_or_fallback(yolo):
+    """TERM inside sandbox matches host TERM, falling back to xterm-256color."""
+    host_val = os.environ.get("TERM")
+    expected = host_val if host_val else "xterm-256color"
     result = yolo("bash", "-c", 'echo "$TERM"')
-    assert result.stdout.strip() == "xterm-256color"
+    sandbox_val = result.stdout.strip()
+    assert sandbox_val == expected, f"Sandbox TERM={sandbox_val!r} should be {expected!r}"
+
+
+@pytest.mark.parametrize("var", ["COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION"])
+def test_optional_terminal_var_matches_host(yolo, var):
+    """Optional terminal env vars inside sandbox match host values (passthrough via bwrap)."""
+    host_val = os.environ.get(var)
+    if host_val:
+        result = yolo("bash", "-c", f'echo "${{{var}:-}}"')
+        sandbox_val = result.stdout.strip()
+        assert sandbox_val == host_val, (
+            f"Sandbox {var}={sandbox_val!r} should match host {var}={host_val!r}"
+        )
+    else:
+        cmd = f'if [ -n "${{{var}+set}}" ]; then echo "SET:${{{var}}}"; else echo UNSET; fi'
+        result = yolo("bash", "-c", cmd)
+        sandbox_state = result.stdout.strip()
+        assert sandbox_state == "UNSET", (
+            f"Sandbox {var} should be unset when host has no value, got {sandbox_state!r}"
+        )
 
 
 def test_shell_is_bash(yolo):

@@ -270,6 +270,14 @@ run_sandbox() {
     --setenv HOME "$home"
     --setenv USER "$user"
     --setenv XDG_RUNTIME_DIR "$xdg_runtime_dir"
+  )
+
+  bwrap_args+=(--setenv TERM "${TERM:-xterm-256color}")
+  [[ -n ${COLORTERM:-} ]] && bwrap_args+=(--setenv COLORTERM "$COLORTERM")
+  [[ -n ${TERM_PROGRAM:-} ]] && bwrap_args+=(--setenv TERM_PROGRAM "$TERM_PROGRAM")
+  [[ -n ${TERM_PROGRAM_VERSION:-} ]] && bwrap_args+=(--setenv TERM_PROGRAM_VERSION "$TERM_PROGRAM_VERSION")
+
+  bwrap_args+=(
     --unshare-ipc
     --unshare-pid
     --unshare-uts

@@ -91,6 +91,10 @@ def test_clearenv_only_expected_vars(yolo):
         "NIX_REMOTE",
         "XDG_RUNTIME_DIR",
     }
+    # These terminal vars only appear when set on the host
+    host_passthrough_vars = {
+        var for var in ("COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION") if os.environ.get(var)
+    }
     # NixOS set-environment exports additional vars beyond our required set
     nixos_vars = {
         "__NIXOS_SET_ENVIRONMENT_DONE",
@@ -117,7 +121,7 @@ def test_clearenv_only_expected_vars(yolo):
         "PWD",
         "SHLVL",
     }
-    expected_vars = required_vars | nixos_vars | shell_vars
+    expected_vars = required_vars | host_passthrough_vars | nixos_vars | shell_vars
     result = yolo("env")
     actual_vars = set()
     for line in result.stdout.strip().splitlines():

@@ -33,7 +33,7 @@
   };
 
   environment = {
-    variables.TERM = "xterm-256color";
+    enableAllTerminfo = true;
     variables.SHELL = "/run/current-system/sw/bin/bash";
 
     etc."uv/uv.toml".source =
@@ -46,7 +46,6 @@
 
     systemPackages = with pkgs; [
       # Core
-      ncurses
       coreutils
       pkgsStatic.busybox
       bashInteractive
