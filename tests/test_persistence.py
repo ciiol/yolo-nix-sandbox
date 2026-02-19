@@ -1,27 +1,25 @@
 """Parameterized state persistence tests for the yolo sandbox."""
 
+import uuid
+
 import pytest
 
-PERSISTENCE_CASES = [
-    ("claude", "~/.claude/marker"),
-    ("codex", "~/.codex/marker"),
-    ("gemini", "~/.gemini/marker"),
-    ("ralphex", "~/.config/ralphex/marker"),
-    ("gh", "~/.config/gh/marker"),
-    ("containers", "~/.local/share/containers/marker"),
+PERSISTENCE_PATHS = [
+    ".claude",
+    ".codex",
+    ".gemini",
+    ".config/ralphex",
+    ".config/gh",
+    ".local/share/containers",
 ]
 
 
-@pytest.mark.parametrize(
-    ("name", "marker_path"),
-    PERSISTENCE_CASES,
-    ids=[c[0] for c in PERSISTENCE_CASES],
-)
-def test_state_persists(yolo_with_state, name, marker_path):
-    """State written in one sandbox run persists across runs via XDG_DATA_HOME."""
-    content = f"{name}-persistence-marker"
-    yolo_with_state("bash", "-c", f"echo '{content}' > {marker_path}")
-    result = yolo_with_state("bash", "-c", f"cat {marker_path}")
-    assert result.stdout.strip() == content, (
-        f"Expected '{content}' in {marker_path}, got '{result.stdout.strip()}'"
-    )
+@pytest.mark.parametrize("rel_path", PERSISTENCE_PATHS)
+def test_state_persists(yolo, home_path, rel_path):
+    """State written in one sandbox run persists across runs."""
+    marker = home_path / rel_path / f"{uuid.uuid4()}"
+    result = yolo("test", "-e", marker, check=False)
+    assert result.returncode != 0, "Marker should not exist before creation"
+    yolo("touch", marker)
+    result = yolo("test", "-e", marker, check=False)
+    assert result.returncode == 0, "Marker should persist across sandbox runs"

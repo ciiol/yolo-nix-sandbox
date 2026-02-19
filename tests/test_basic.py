@@ -3,7 +3,6 @@
 import getpass
 import os
 import socket
-from pathlib import Path
 
 
 def test_echo(yolo):
@@ -12,10 +11,10 @@ def test_echo(yolo):
     assert result.stdout.strip() == "hello"
 
 
-def test_pwd(yolo):
+def test_pwd(yolo, project_path):
     """yolo run pwd outputs current working directory."""
     result = yolo("pwd")
-    assert result.stdout.strip() == str(Path.cwd())
+    assert result.stdout.strip() == str(project_path)
 
 
 def test_whoami(yolo):

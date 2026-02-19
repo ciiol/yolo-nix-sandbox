@@ -17,7 +17,7 @@ def test_podman_info(yolo, requires_wide_uid):
     assert store["graphDriverName"] == "overlay"
 
 
-def test_podman_build_and_run(yolo_with_state, requires_wide_uid):
+def test_podman_build_and_run(yolo, requires_wide_uid):
     """Build a busybox image offline, run via podman and docker, verify persistence."""
     build_script = (
         "set -e; dir=$(mktemp -d);"
@@ -25,22 +25,38 @@ def test_podman_build_and_run(yolo_with_state, requires_wide_uid):
         " printf 'FROM scratch\\nCOPY busybox /busybox\\n' > $dir/Dockerfile;"
         " podman build -t busybox-test $dir"
     )
-    result = yolo_with_state("bash", "-c", build_script, check=False)
+    result = yolo("bash", "-c", build_script, check=False, timeout=120)
     assert result.returncode == 0, f"podman build failed: {result.stderr}"
 
-    result = yolo_with_state(
-        "podman", "run", "--rm", "busybox-test", "/busybox", "echo", "hello", check=False
+    result = yolo(
+        "podman",
+        "run",
+        "--rm",
+        "busybox-test",
+        "/busybox",
+        "echo",
+        "hello",
+        check=False,
+        timeout=120,
     )
     assert result.returncode == 0, f"podman run failed: {result.stderr}"
     assert result.stdout.strip() == "hello"
 
-    result = yolo_with_state(
-        "docker", "run", "--rm", "busybox-test", "/busybox", "echo", "hello", check=False
+    result = yolo(
+        "docker",
+        "run",
+        "--rm",
+        "busybox-test",
+        "/busybox",
+        "echo",
+        "hello",
+        check=False,
+        timeout=120,
     )
     assert result.returncode == 0, f"docker run failed: {result.stderr}"
     assert result.stdout.strip() == "hello"
 
-    result = yolo_with_state("podman", "image", "exists", "busybox-test", check=False)
+    result = yolo("podman", "image", "exists", "busybox-test", check=False)
     assert result.returncode == 0, "busybox-test image did not persist across sandbox runs"
 
 

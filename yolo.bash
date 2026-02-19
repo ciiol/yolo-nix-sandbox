@@ -3,8 +3,8 @@ gen_passwd() {
   uid="$(id -u)"
   gid="$(id -g)"
   user="$(id -un)"
-  printf 'root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:Nobody:/:/nope\n%s:x:%s:%s:%s:/home/%s:/bin/bash\n' \
-    "$user" "$uid" "$gid" "$user" "$user"
+  printf 'root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:Nobody:/:/nope\n%s:x:%s:%s:%s:%s:/bin/bash\n' \
+    "$user" "$uid" "$gid" "$user" "$HOME"
 }
 
 gen_group() {
@@ -163,9 +163,8 @@ run_sandbox() {
   local home_dir="$tmpdir/home"
   mkdir "$home_dir"
 
-  local user home uid gid
+  local user uid gid
   user="$(id -un)"
-  home="/home/$user"
   uid="$(id -u)"
   gid="$(id -g)"
 
@@ -248,31 +247,31 @@ run_sandbox() {
     --bind /nix/var/nix/daemon-socket /nix/var/nix/daemon-socket
     --ro-bind @SANDBOX_PROFILE@ /run/current-system/sw
     --bind "$etc_dir" /etc
-    --bind "$home_dir" "$home"
+    --bind "$home_dir" "$HOME"
     --proc /proc
     --dev /dev
     "${optional_mounts[@]}"
     --tmpfs /tmp
     --tmpfs /var/tmp
     --bind "$PWD" "$PWD"
-    --bind "$claude_data_dir" "$home/.claude"
-    --bind "$codex_data_dir" "$home/.codex"
-    --bind "$gemini_data_dir" "$home/.gemini"
-    --bind "$ralphex_data_dir" "$home/.config/ralphex"
-    --bind "$gh_data_dir" "$home/.config/gh"
-    --bind "$containers_data_dir" "$home/.local/share/containers"
-    --ro-bind "$git_config_dir" "$home/.config/git"
-    --ro-bind "$ssh_config_dir" "$home/.ssh"
-    --bind "$ssh_config_dir/known_hosts" "$home/.ssh/known_hosts"
-    --bind "$ssh_config_dir/allowed_signers" "$home/.ssh/allowed_signers"
+    --bind "$claude_data_dir" "$HOME/.claude"
+    --bind "$codex_data_dir" "$HOME/.codex"
+    --bind "$gemini_data_dir" "$HOME/.gemini"
+    --bind "$ralphex_data_dir" "$HOME/.config/ralphex"
+    --bind "$gh_data_dir" "$HOME/.config/gh"
+    --bind "$containers_data_dir" "$HOME/.local/share/containers"
+    --ro-bind "$git_config_dir" "$HOME/.config/git"
+    --ro-bind "$ssh_config_dir" "$HOME/.ssh"
+    --bind "$ssh_config_dir/known_hosts" "$HOME/.ssh/known_hosts"
+    --bind "$ssh_config_dir/allowed_signers" "$HOME/.ssh/allowed_signers"
     --dir "$xdg_runtime_dir"
     --clearenv
-    --setenv HOME "$home"
+    --setenv HOME "$HOME"
     --setenv USER "$user"
     --setenv XDG_RUNTIME_DIR "$xdg_runtime_dir"
   )
 
-  bwrap_args+=(--setenv TERM "${TERM:-xterm-256color}")
+  bwrap_args+=(--setenv TERM "$TERM")
   [[ -n ${COLORTERM:-} ]] && bwrap_args+=(--setenv COLORTERM "$COLORTERM")
   [[ -n ${TERM_PROGRAM:-} ]] && bwrap_args+=(--setenv TERM_PROGRAM "$TERM_PROGRAM")
   [[ -n ${TERM_PROGRAM_VERSION:-} ]] && bwrap_args+=(--setenv TERM_PROGRAM_VERSION "$TERM_PROGRAM_VERSION")

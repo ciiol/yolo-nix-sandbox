@@ -1,33 +1,30 @@
 """Tests for direnv integration in the yolo sandbox."""
 
-
-def test_direnv_loads_devshell_tools(yolo_with_direnv):
-    """With direnv active, devShell tools (e.g. just) are available."""
-    result = yolo_with_direnv("bash", "-c", "command -v just", check=False)
-    assert result.returncode == 0, f"'just' not found with direnv active: {result.stderr}"
+import pytest
 
 
-def test_direnv_preserves_sandbox_tools(yolo_with_direnv):
-    """With direnv active, sandbox tools (e.g. jq) are still available."""
-    result = yolo_with_direnv("bash", "-c", "command -v jq", check=False)
-    assert result.returncode == 0, f"'jq' not found with direnv active: {result.stderr}"
+@pytest.fixture
+def direnv_env(sandbox_env, project_path):
+    """Env dict with DIRENV_DIR set, as it would be when a user enters the project dir."""
+    return {**sandbox_env, "DIRENV_DIR": f"-{project_path}"}
 
 
-def test_direnv_inactive_without_host_direnv(yolo):
-    """Without DIRENV_DIR set, devShell tools are NOT available (proving they come from direnv)."""
-    result = yolo("bash", "-c", "command -v just", check=False)
-    assert result.returncode != 0, "'just' should not be available without direnv"
+def test_direnv_loads_if_allowed(yolo, direnv, direnv_env):
+    """When .envrc is allowed, envrc variable is exported."""
+    direnv("allow", env=direnv_env)
+    result = yolo("printenv", "FOO", env=direnv_env, check=False)
+    assert result.returncode == 0, "envrc should be loaded"
 
 
-def test_direnv_skips_when_not_allowed(yolo_with_direnv_not_allowed):
-    """When .envrc exists but is not allowed by direnv, devShell tools should NOT be available."""
-    result = yolo_with_direnv_not_allowed("bash", "-c", "command -v just", check=False)
-    assert result.returncode != 0, (
-        "'just' should not be available when .envrc is not allowed by direnv"
-    )
+def test_direnv_skips_when_not_allowed(yolo, direnv, direnv_env, project_path):
+    """When .envrc is not allowed, envrc variable is not exported."""
+    assert (project_path / ".envrc").exists(), ".envrc file should exist"
+    result = yolo("printenv", "FOO", env=direnv_env, check=False)
+    assert result.returncode != 0, "envrc should not be loaded"
 
 
-def test_direnv_skips_when_denied(yolo_with_direnv_denied):
-    """When .envrc is explicitly denied by direnv, devShell tools should NOT be available."""
-    result = yolo_with_direnv_denied("bash", "-c", "command -v just", check=False)
-    assert result.returncode != 0, "'just' should not be available when .envrc is denied by direnv"
+def test_direnv_skips_when_denied(yolo, direnv, direnv_env):
+    """When .envrc is explicitly denied, envrc variable is not exported."""
+    direnv("deny", env=direnv_env)
+    result = yolo("printenv", "FOO", env=direnv_env, check=False)
+    assert result.returncode != 0, "envrc should not be loaded"

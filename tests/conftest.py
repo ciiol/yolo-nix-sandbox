@@ -53,11 +53,6 @@ def requires_wide_uid(wide_uid):
         pytest.skip("host lacks wide-UID support (subuid/subgid/newuidmap/newgidmap)")
 
 
-def _env_without_direnv():
-    """Return a copy of os.environ with all DIRENV_* variables removed."""
-    return {k: v for k, v in os.environ.items() if not k.startswith("DIRENV_")}
-
-
 @pytest.fixture(scope="session")
 def yolo_bin():
     """Build yolo once per test session, return binary path."""
@@ -78,41 +73,58 @@ def yolo_bin():
 
 
 @pytest.fixture
-def yolo(yolo_bin):
+def project_path(tmp_path):
+    """Creates a temporary directory to use as the project directory for yolo run."""
+    dest = tmp_path / "project"
+    dest.mkdir()
+    return dest
+
+
+@pytest.fixture
+def home_path(tmp_path):
+    """Creates a temporary directory to use as the home directory for yolo run."""
+    dest = tmp_path / "home"
+    dest.mkdir()
+    return dest
+
+
+@pytest.fixture
+def sandbox_env(home_path):
+    """Minimal env for running yolo. Treat as read-only."""
+    return {
+        "PATH": os.environ["PATH"],
+        "HOME": str(home_path),
+    }
+
+
+@pytest.fixture
+def yolo(yolo_cmd, sandbox_env):
     """Run commands inside the sandbox via ``yolo run``.
 
-    Strips DIRENV_* vars so host direnv state doesn't affect isolation tests.
+    Uses sandbox_env by default. Pass ``env=`` to replace with a custom env.
     """
-    env = _env_without_direnv()
 
-    def run(*args, check=True, timeout=60):
-        return subprocess.run(
-            [yolo_bin, "run", *args],
-            capture_output=True,
-            text=True,
-            check=check,
-            env=env,
-            timeout=timeout,
-        )
+    def run(*args, **kwargs):
+        return yolo_cmd("run", *args, **kwargs)
 
     return run
 
 
 @pytest.fixture
-def yolo_cmd(yolo_bin):
+def yolo_cmd(yolo_bin, project_path, sandbox_env):
     """Run yolo subcommands (no implicit ``run`` prefix).
 
-    Strips DIRENV_* vars so host direnv state doesn't affect subcommand tests.
+    Uses sandbox_env by default. Pass ``env=`` to replace with a custom env.
     """
-    env = _env_without_direnv()
 
-    def run(*args, check=True, timeout=60):
+    def run(*args, check=True, timeout=60, env=None):
         return subprocess.run(
             [yolo_bin, *args],
             capture_output=True,
             text=True,
             check=check,
-            env=env,
+            cwd=project_path,
+            env=env or sandbox_env,
             timeout=timeout,
         )
 
@@ -120,124 +132,22 @@ def yolo_cmd(yolo_bin):
 
 
 @pytest.fixture
-def yolo_with_state(yolo_bin, tmp_path):
-    """Run commands in the sandbox with a dedicated XDG_DATA_HOME for state persistence.
+def direnv(project_path, sandbox_env):
+    """Run ``direnv allow/deny .`` using the sandbox_env's XDG_DATA_HOME. Creates dummy .envrc.
 
-    Strips DIRENV_* vars so host direnv state doesn't affect persistence tests.
+    Only handles filesystem setup (the allow database). Tests are responsible
+    for adding DIRENV_DIR to the env they pass to yolo.
     """
-    state_dir = tmp_path / "yolo-state"
-    state_dir.mkdir()
+    envrc_path = project_path / ".envrc"
+    envrc_path.write_text("export FOO=bar\n")
 
-    def run(*args, check=True):
-        env = {**_env_without_direnv(), "XDG_DATA_HOME": str(state_dir)}
+    def setup(action, env=None):
         return subprocess.run(
-            [yolo_bin, "run", *args],
+            ["direnv", action, "."],
+            cwd=project_path,
+            env=env or sandbox_env,
+            check=True,
             capture_output=True,
-            text=True,
-            check=check,
-            env=env,
-            timeout=120,
         )
 
-    return run
-
-
-@pytest.fixture
-def yolo_with_direnv(yolo_bin, tmp_path):
-    """Run commands inside the sandbox with direnv activation.
-
-    Sets DIRENV_DIR to trigger direnv detection and creates a proper "allowed"
-    state via ``direnv allow .`` with an isolated XDG_DATA_HOME so the host's
-    allow database is not consulted.
-    """
-    state_dir = tmp_path / "direnv-allowed"
-    state_dir.mkdir()
-    allow_env = {**os.environ, "XDG_DATA_HOME": str(state_dir)}
-    subprocess.run(
-        ["direnv", "allow", "."],
-        cwd=PROJECT_ROOT,
-        env=allow_env,
-        check=True,
-        capture_output=True,
-    )
-    env = {
-        **_env_without_direnv(),
-        "DIRENV_DIR": f"-{PROJECT_ROOT}",
-        "XDG_DATA_HOME": str(state_dir),
-    }
-
-    def run(*args, check=True):
-        return subprocess.run(
-            [yolo_bin, "run", *args],
-            capture_output=True,
-            text=True,
-            check=check,
-            env=env,
-            timeout=120,
-        )
-
-    return run
-
-
-@pytest.fixture
-def yolo_with_direnv_denied(yolo_bin, tmp_path):
-    """Run commands inside the sandbox with direnv detection but .envrc explicitly denied.
-
-    Uses a fresh XDG_DATA_HOME and runs ``direnv deny .`` so direnv records
-    AllowStatus 2 (Denied) for the project .envrc.
-    """
-    state_dir = tmp_path / "direnv-denied"
-    state_dir.mkdir()
-    deny_env = {**os.environ, "XDG_DATA_HOME": str(state_dir)}
-    subprocess.run(
-        ["direnv", "deny", "."],
-        cwd=PROJECT_ROOT,
-        env=deny_env,
-        check=True,
-        capture_output=True,
-    )
-    env = {
-        **_env_without_direnv(),
-        "DIRENV_DIR": f"-{PROJECT_ROOT}",
-        "XDG_DATA_HOME": str(state_dir),
-    }
-
-    def run(*args, check=True):
-        return subprocess.run(
-            [yolo_bin, "run", *args],
-            capture_output=True,
-            text=True,
-            check=check,
-            env=env,
-            timeout=120,
-        )
-
-    return run
-
-
-@pytest.fixture
-def yolo_with_direnv_not_allowed(yolo_bin, tmp_path):
-    """Run commands inside the sandbox with direnv detection but .envrc NOT allowed.
-
-    Uses a fresh XDG_DATA_HOME so direnv has no allow/deny record for the .envrc,
-    resulting in AllowStatus 1 (NotAllowed).
-    """
-    state_dir = tmp_path / "direnv-not-allowed"
-    state_dir.mkdir()
-    env = {
-        **_env_without_direnv(),
-        "DIRENV_DIR": f"-{PROJECT_ROOT}",
-        "XDG_DATA_HOME": str(state_dir),
-    }
-
-    def run(*args, check=True):
-        return subprocess.run(
-            [yolo_bin, "run", *args],
-            capture_output=True,
-            text=True,
-            check=check,
-            env=env,
-            timeout=120,
-        )
-
-    return run
+    return setup
