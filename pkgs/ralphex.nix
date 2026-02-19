@@ -1,17 +1,17 @@
 {
   lib,
-  buildGoModule,
+  buildGo126Module,
   fetchFromGitHub,
 }:
-buildGoModule rec {
+buildGo126Module rec {
   pname = "ralphex";
-  version = "0.11.1";
+  version = "0.15.2";
 
   src = fetchFromGitHub {
     owner = "umputun";
     repo = "ralphex";
     tag = "v${version}";
-    hash = "sha256-XzakLhynZQppOgi3lnMif7YTzVdXVNBlDu6omB1zVlE=";
+    hash = "sha256-ZtGxv2FoGehPpx3kUVH8oP0Cc3LZkxrXo3KHiDYWafQ=";
   };
 
   vendorHash = null;
