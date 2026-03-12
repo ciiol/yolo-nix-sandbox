@@ -5,13 +5,13 @@
 }:
 buildGo126Module rec {
   pname = "ralphex";
-  version = "0.15.2";
+  version = "0.21.3";
 
   src = fetchFromGitHub {
     owner = "umputun";
     repo = "ralphex";
     tag = "v${version}";
-    hash = "sha256-ZtGxv2FoGehPpx3kUVH8oP0Cc3LZkxrXo3KHiDYWafQ=";
+    hash = "sha256-x3ACbZxZpBckHlkj1OplFnpgsk6aRs1T27T67J64zd8=";
   };
 
   vendorHash = null;
