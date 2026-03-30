@@ -195,6 +195,9 @@ run_sandbox() {
   local gh_data_dir="$data_dir/gh"
   mkdir -p "$gh_data_dir"
 
+  local sops_age_data_dir="$data_dir/sops-age"
+  mkdir -p "$sops_age_data_dir"
+
   local containers_data_dir="$data_dir/containers"
   mkdir -p "$containers_data_dir"
 
@@ -259,6 +262,7 @@ run_sandbox() {
     --bind "$gemini_data_dir" "$HOME/.gemini"
     --bind "$ralphex_data_dir" "$HOME/.config/ralphex"
     --bind "$gh_data_dir" "$HOME/.config/gh"
+    --bind "$sops_age_data_dir" "$HOME/.config/sops/age"
     --bind "$containers_data_dir" "$HOME/.local/share/containers"
     --ro-bind "$git_config_dir" "$HOME/.config/git"
     --ro-bind "$ssh_config_dir" "$HOME/.ssh"

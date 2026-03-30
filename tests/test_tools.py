@@ -27,6 +27,8 @@ TOOLS = [
     "podman-compose",
     "docker",
     "busybox",
+    "age",
+    "sops",
 ]
 
 

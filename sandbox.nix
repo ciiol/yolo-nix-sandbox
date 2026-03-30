@@ -78,6 +78,10 @@
       gh
       openssh
 
+      # Security & encryption
+      age
+      sops
+
       # Archives & compression
       gnutar
       gzip
