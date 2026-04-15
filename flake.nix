@@ -37,35 +37,23 @@
             rustfmt.enable = true;
           };
         };
+
+      perSystem = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          inherit (import ./sandbox { inherit nixpkgs system; }) env;
+        in
+        {
+          inherit pkgs env;
+        }
+      );
     in
     {
       packages = forAllSystems (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
-          sandboxConfig = nixpkgs.lib.nixosSystem {
-            modules = [
-              {
-                nixpkgs.hostPlatform = system;
-                nixpkgs.overlays = [
-                  (final: _prev: {
-                    ralphex = final.callPackage ./sandbox/pkgs/ralphex.nix { };
-                    revdiff = final.callPackage ./sandbox/pkgs/revdiff.nix { };
-                  })
-                ];
-              }
-              ./sandbox
-            ];
-          };
-
-          sandboxProfile = sandboxConfig.config.system.path;
-          sandboxEtc = sandboxConfig.config.system.build.etc;
-
-          sandbox-entrypoint = pkgs.writeShellApplication {
-            name = "sandbox-entrypoint";
-            text = builtins.readFile ./sandbox/entrypoint.bash;
-          };
-
+          inherit (perSystem.${system}) pkgs env;
           yolo = pkgs.rustPlatform.buildRustPackage {
             pname = "yolo";
             version = "0.1.0";
@@ -78,11 +66,7 @@
               ];
             };
             cargoLock.lockFile = ./Cargo.lock;
-            env = {
-              SANDBOX_PROFILE = "${sandboxProfile}";
-              SANDBOX_ETC = "${sandboxEtc}";
-              SANDBOX_ENTRYPOINT = "${sandbox-entrypoint}";
-            };
+            inherit env;
             nativeBuildInputs = [ pkgs.makeWrapper ];
             postInstall = ''
               wrapProgram $out/bin/yolo \
@@ -108,35 +92,16 @@
 
       checks = forAllSystems (system: {
         formatting = (treefmtEval nixpkgs.legacyPackages.${system}).config.build.check self;
+        yolo = self.packages.${system}.default;
       });
 
       devShells = forAllSystems (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          inherit (perSystem.${system}) pkgs env;
           pythonWithPackages = pkgs.python3.withPackages (ps: [
             ps.pytest
           ]);
-          sandboxConfig = nixpkgs.lib.nixosSystem {
-            modules = [
-              {
-                nixpkgs.hostPlatform = system;
-                nixpkgs.overlays = [
-                  (final: _prev: {
-                    ralphex = final.callPackage ./sandbox/pkgs/ralphex.nix { };
-                    revdiff = final.callPackage ./sandbox/pkgs/revdiff.nix { };
-                  })
-                ];
-              }
-              ./sandbox
-            ];
-          };
-          sandboxProfile = sandboxConfig.config.system.path;
-          sandboxEtc = sandboxConfig.config.system.build.etc;
-          sandbox-entrypoint = pkgs.writeShellApplication {
-            name = "sandbox-entrypoint";
-            text = builtins.readFile ./sandbox/entrypoint.bash;
-          };
         in
         {
           default = pkgs.mkShell {
@@ -149,11 +114,7 @@
               pkgs.rustfmt
               pythonWithPackages
             ];
-            env = {
-              SANDBOX_PROFILE = "${sandboxProfile}";
-              SANDBOX_ETC = "${sandboxEtc}";
-              SANDBOX_ENTRYPOINT = "${sandbox-entrypoint}";
-            };
+            inherit env;
           };
         }
       );

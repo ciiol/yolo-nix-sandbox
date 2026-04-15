@@ -1,13 +1,8 @@
 default: check
 
-check: lint test
-
-lint:
+check:
     nix flake check
+    pytest tests/
 
 fmt:
     nix fmt
-
-test:
-    cargo test
-    pytest tests/

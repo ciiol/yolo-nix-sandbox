@@ -135,10 +135,8 @@ nix develop
 Available commands (via `just`):
 
 ```sh
-just check   # Run lint + test
-just lint    # Run nix flake check (all linters via treefmt-nix)
-just fmt     # Run nix fmt (all formatters via treefmt-nix)
-just test    # Run pytest tests/ -v
+just check   # Run linters and tests
+just fmt     # Run formatters
 ```
 
 ## Requirements

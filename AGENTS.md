@@ -4,34 +4,16 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Commands
 
-Run all checks (lint + test):
+Run all checks (linters + unit tests + integration tests):
 
 ```
 just check
 ```
 
-Lint (runs `nix flake check` — all linters via treefmt-nix):
-
-```
-just lint
-```
-
-Format code (runs `nix fmt` — all formatters and linters via treefmt-nix):
+Format code
 
 ```
 just fmt
-```
-
-Run tests:
-
-```
-just test
-```
-
-Run a command in the sandbox:
-
-```
-yolo run <cmd> [args...]
 ```
 
 ## Key Constraints
