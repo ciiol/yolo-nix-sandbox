@@ -10,6 +10,7 @@ PERSISTENCE_PATHS = [
     ".gemini",
     ".config/ralphex",
     ".config/gh",
+    ".config/revdiff",
     ".local/share/containers",
     ".config/sops/age",
 ]

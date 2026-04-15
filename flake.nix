@@ -50,6 +50,7 @@
                 nixpkgs.overlays = [
                   (final: _prev: {
                     ralphex = final.callPackage ./sandbox/pkgs/ralphex.nix { };
+                    revdiff = final.callPackage ./sandbox/pkgs/revdiff.nix { };
                   })
                 ];
               }
@@ -123,6 +124,7 @@
                 nixpkgs.overlays = [
                   (final: _prev: {
                     ralphex = final.callPackage ./sandbox/pkgs/ralphex.nix { };
+                    revdiff = final.callPackage ./sandbox/pkgs/revdiff.nix { };
                   })
                 ];
               }

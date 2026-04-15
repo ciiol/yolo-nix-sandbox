@@ -70,6 +70,7 @@ in
       codex-wrapped
       gemini-cli
       ralphex
+      revdiff
 
       # Search & navigation
       ripgrep

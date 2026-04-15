@@ -219,6 +219,7 @@ fn build_bwrap_args(
         ("gemini", format!("{home}/.gemini")),
         ("ralphex", format!("{home}/.config/ralphex")),
         ("gh", format!("{home}/.config/gh")),
+        ("revdiff", format!("{home}/.config/revdiff")),
         ("sops-age", format!("{home}/.config/sops/age")),
         ("containers", format!("{home}/.local/share/containers")),
     ] {
@@ -326,6 +327,7 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
         "gemini",
         "ralphex",
         "gh",
+        "revdiff",
         "sops-age",
         "containers",
         "git",
@@ -522,6 +524,12 @@ mod tests {
             "--bind",
             "/tmp/sandbox/data/gh",
             "/home/testuser/.config/gh"
+        ));
+        assert!(has_triple(
+            &args,
+            "--bind",
+            "/tmp/sandbox/data/revdiff",
+            "/home/testuser/.config/revdiff"
         ));
         assert!(has_triple(
             &args,
