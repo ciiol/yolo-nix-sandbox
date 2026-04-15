@@ -4,12 +4,6 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Commands
 
-Enter the dev shell (provides `just`, `pytest`):
-
-```
-nix develop
-```
-
 Run all checks (lint + test):
 
 ```
@@ -44,7 +38,7 @@ yolo run <cmd> [args...]
 
 - Linux only
 - Tests require a running Nix daemon, bwrap user namespaces
-- The `yolo.bash` script is a template: `@SANDBOX_PROFILE@`, `@SANDBOX_ETC@`, and `@SANDBOX_ENTRYPOINT@` are replaced at build time by `writeShellApplication` in flake.nix, so the raw script cannot be run directly
+- The Rust binary cannot run outside `nix develop` or `nix build` because the `SANDBOX_*` env vars must point to valid Nix store paths
 
 ## Code Comments
 

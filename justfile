@@ -9,4 +9,5 @@ fmt:
     nix fmt
 
 test:
+    cargo test
     pytest tests/

@@ -34,6 +34,7 @@
             mdformat.enable = true;
             ruff-check.enable = true;
             ruff-format.enable = true;
+            rustfmt.enable = true;
           };
         };
     in
@@ -64,23 +65,39 @@
             text = builtins.readFile ./entrypoint.bash;
           };
 
-          yolo = pkgs.writeShellApplication {
-            name = "yolo";
-            runtimeInputs = [
-              pkgs.bubblewrap
-              pkgs.direnv
-              pkgs.jq
-              pkgs.util-linux
-            ];
-            text =
-              builtins.replaceStrings
-                [ "@SANDBOX_PROFILE@" "@SANDBOX_ETC@" "@SANDBOX_ENTRYPOINT@" ]
-                [ "${sandboxProfile}" "${sandboxEtc}" "${sandbox-entrypoint}" ]
-                (builtins.readFile ./yolo.bash);
+          yolo = pkgs.rustPlatform.buildRustPackage {
+            pname = "yolo";
+            version = "0.1.0";
+            src = pkgs.lib.fileset.toSource {
+              root = ./.;
+              fileset = pkgs.lib.fileset.unions [
+                ./Cargo.toml
+                ./Cargo.lock
+                ./src
+              ];
+            };
+            cargoLock.lockFile = ./Cargo.lock;
+            env = {
+              SANDBOX_PROFILE = "${sandboxProfile}";
+              SANDBOX_ETC = "${sandboxEtc}";
+              SANDBOX_ENTRYPOINT = "${sandbox-entrypoint}";
+            };
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            postInstall = ''
+              wrapProgram $out/bin/yolo \
+                --prefix PATH : ${
+                  pkgs.lib.makeBinPath [
+                    pkgs.bubblewrap
+                    pkgs.direnv
+                    pkgs.util-linux
+                  ]
+                }
+            '';
           };
         in
         {
           default = yolo;
+          inherit yolo;
         }
       );
 
@@ -99,14 +116,42 @@
           pythonWithPackages = pkgs.python3.withPackages (ps: [
             ps.pytest
           ]);
+          sandboxConfig = nixpkgs.lib.nixosSystem {
+            modules = [
+              {
+                nixpkgs.hostPlatform = system;
+                nixpkgs.overlays = [
+                  (final: _prev: {
+                    ralphex = final.callPackage ./pkgs/ralphex.nix { };
+                  })
+                ];
+              }
+              ./sandbox.nix
+            ];
+          };
+          sandboxProfile = sandboxConfig.config.system.path;
+          sandboxEtc = sandboxConfig.config.system.build.etc;
+          sandbox-entrypoint = pkgs.writeShellApplication {
+            name = "sandbox-entrypoint";
+            text = builtins.readFile ./entrypoint.bash;
+          };
         in
         {
           default = pkgs.mkShell {
             packages = [
+              pkgs.cargo
+              pkgs.clippy
               pkgs.direnv
               pkgs.just
+              pkgs.rustc
+              pkgs.rustfmt
               pythonWithPackages
             ];
+            env = {
+              SANDBOX_PROFILE = "${sandboxProfile}";
+              SANDBOX_ETC = "${sandboxEtc}";
+              SANDBOX_ENTRYPOINT = "${sandbox-entrypoint}";
+            };
           };
         }
       );
