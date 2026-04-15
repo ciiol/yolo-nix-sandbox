@@ -62,7 +62,7 @@ Add yolo as a flake input and enable the Home Manager module:
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.sharedModules = [ yolo.homeManagerModules.default ];
+            home-manager.sharedModules = [ yolo.homeModules.default ];
             home-manager.users.jdoe = {
               programs.yolo.enable = true;
             };

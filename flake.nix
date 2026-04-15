@@ -119,7 +119,7 @@
         }
       );
 
-      homeManagerModules.default =
+      homeModules.default =
         { lib, pkgs, ... }:
         {
           imports = [ ./modules/home-manager.nix ];
