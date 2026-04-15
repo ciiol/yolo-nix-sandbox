@@ -160,7 +160,7 @@
         { lib, pkgs, ... }:
         {
           imports = [ ./modules/home-manager.nix ];
-          programs.yolo.package = lib.mkDefault self.packages.${pkgs.system}.default;
+          programs.yolo.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
     };
 }
