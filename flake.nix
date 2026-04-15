@@ -49,11 +49,11 @@
                 nixpkgs.hostPlatform = system;
                 nixpkgs.overlays = [
                   (final: _prev: {
-                    ralphex = final.callPackage ./pkgs/ralphex.nix { };
+                    ralphex = final.callPackage ./sandbox/pkgs/ralphex.nix { };
                   })
                 ];
               }
-              ./sandbox.nix
+              ./sandbox
             ];
           };
 
@@ -62,7 +62,7 @@
 
           sandbox-entrypoint = pkgs.writeShellApplication {
             name = "sandbox-entrypoint";
-            text = builtins.readFile ./entrypoint.bash;
+            text = builtins.readFile ./sandbox/entrypoint.bash;
           };
 
           yolo = pkgs.rustPlatform.buildRustPackage {
@@ -122,18 +122,18 @@
                 nixpkgs.hostPlatform = system;
                 nixpkgs.overlays = [
                   (final: _prev: {
-                    ralphex = final.callPackage ./pkgs/ralphex.nix { };
+                    ralphex = final.callPackage ./sandbox/pkgs/ralphex.nix { };
                   })
                 ];
               }
-              ./sandbox.nix
+              ./sandbox
             ];
           };
           sandboxProfile = sandboxConfig.config.system.path;
           sandboxEtc = sandboxConfig.config.system.build.etc;
           sandbox-entrypoint = pkgs.writeShellApplication {
             name = "sandbox-entrypoint";
-            text = builtins.readFile ./entrypoint.bash;
+            text = builtins.readFile ./sandbox/entrypoint.bash;
           };
         in
         {
