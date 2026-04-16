@@ -3,9 +3,12 @@
   buildGoModule,
   fetchFromGitHub,
 }:
-buildGoModule rec {
-  pname = "revdiff";
+let
   version = "0.18.0";
+in
+buildGoModule {
+  pname = "revdiff";
+  inherit version;
 
   src = fetchFromGitHub {
     owner = "umputun";
@@ -20,15 +23,15 @@ buildGoModule rec {
 
   subPackages = [ "app" ];
 
-  postInstall = ''
-    mv $out/bin/app $out/bin/revdiff
-  '';
-
   ldflags = [
     "-s"
     "-w"
     "-X main.revision=v${version}"
   ];
+
+  postInstall = ''
+    mv $out/bin/app $out/bin/revdiff
+  '';
 
   meta = {
     description = "Terminal UI for reviewing diffs, files, and documents with inline annotations";

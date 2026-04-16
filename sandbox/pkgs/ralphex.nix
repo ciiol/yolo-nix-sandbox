@@ -3,9 +3,12 @@
   buildGoModule,
   fetchFromGitHub,
 }:
-buildGoModule rec {
-  pname = "ralphex";
+let
   version = "0.26.3";
+in
+buildGoModule {
+  pname = "ralphex";
+  inherit version;
 
   src = fetchFromGitHub {
     owner = "umputun";

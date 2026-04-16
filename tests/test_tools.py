@@ -38,3 +38,9 @@ def test_tool_available(yolo, tool):
     """Each expected tool is available inside the sandbox."""
     result = yolo("which", tool, check=False)
     assert result.returncode == 0, f"Tool '{tool}' not found in sandbox"
+
+
+def test_claude_has_plugin_wiring(yolo):
+    """claude binary is a wrapper that passes --plugin-dir for plugins."""
+    result = yolo("bash", "-c", "cat $(which claude)")
+    assert "--plugin-dir" in result.stdout

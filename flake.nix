@@ -79,10 +79,13 @@
                 }
             '';
           };
+
+          ralphex = pkgs.callPackage ./sandbox/pkgs/ralphex.nix { };
+          revdiff = pkgs.callPackage ./sandbox/pkgs/revdiff.nix { };
         in
         {
           default = yolo;
-          inherit yolo;
+          inherit yolo ralphex revdiff;
         }
       );
 
