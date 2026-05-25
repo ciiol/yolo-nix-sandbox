@@ -30,6 +30,6 @@ in
   env = {
     SANDBOX_PROFILE = "${nixos.config.system.path}";
     SANDBOX_ETC = "${nixos.config.system.build.etc}";
-    SANDBOX_ENTRYPOINT = "${entrypoint}";
+    SANDBOX_ENTRYPOINT = "${entrypoint}/bin/sandbox-entrypoint";
   };
 }

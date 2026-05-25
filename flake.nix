@@ -66,7 +66,6 @@
               ];
             };
             cargoLock.lockFile = ./Cargo.lock;
-            inherit env;
             nativeBuildInputs = [ pkgs.makeWrapper ];
             postInstall = ''
               wrapProgram $out/bin/yolo \
@@ -76,7 +75,10 @@
                     pkgs.direnv
                     pkgs.util-linux
                   ]
-                }
+                } \
+                --set SANDBOX_PROFILE "${env.SANDBOX_PROFILE}" \
+                --set SANDBOX_ETC "${env.SANDBOX_ETC}" \
+                --set SANDBOX_ENTRYPOINT "${env.SANDBOX_ENTRYPOINT}"
             '';
           };
 

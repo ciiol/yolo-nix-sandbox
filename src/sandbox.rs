@@ -11,9 +11,17 @@ use crate::bwrap;
 use crate::etc;
 use crate::uid;
 
-const SANDBOX_PROFILE: &str = env!("SANDBOX_PROFILE");
-const SANDBOX_ETC: &str = env!("SANDBOX_ETC");
-const SANDBOX_ENTRYPOINT: &str = env!("SANDBOX_ENTRYPOINT");
+fn validate_sandbox_env_path(name: &str, value: Option<String>) -> Result<PathBuf> {
+    let val = value.ok_or_else(|| anyhow::anyhow!("{name} env var is not set"))?;
+    if val.is_empty() {
+        anyhow::bail!("{name} env var is empty");
+    }
+    Ok(PathBuf::from(val))
+}
+
+fn sandbox_env_path(name: &str) -> Result<PathBuf> {
+    validate_sandbox_env_path(name, env::var(name).ok())
+}
 
 /// RAII temp directory matching the bash EXIT trap: chmod -R u+rwx then rm -rf.
 /// bwrap may create files with restricted permissions inside the sandbox,
@@ -152,6 +160,8 @@ struct SandboxContext {
     etc_dir: PathBuf,
     home_dir: PathBuf,
     data_dir: PathBuf,
+    profile: PathBuf,
+    entrypoint: PathBuf,
 }
 
 fn build_bwrap_args(
@@ -181,7 +191,7 @@ fn build_bwrap_args(
         "/nix/var/nix/daemon-socket".into(),
         "/nix/var/nix/daemon-socket".into(),
         "--ro-bind".into(),
-        SANDBOX_PROFILE.into(),
+        ctx.profile.display().to_string(),
         "/run/current-system/sw".into(),
         "--bind".into(),
         ctx.etc_dir.display().to_string(),
@@ -287,7 +297,7 @@ fn build_bwrap_args(
     }
 
     args.push("--".into());
-    args.push(format!("{SANDBOX_ENTRYPOINT}/bin/sandbox-entrypoint"));
+    args.push(ctx.entrypoint.display().to_string());
     if use_direnv {
         args.push("--direnv".into());
     }
@@ -297,6 +307,10 @@ fn build_bwrap_args(
 }
 
 pub fn run(command: Vec<String>) -> Result<ExitStatus> {
+    let profile = sandbox_env_path("SANDBOX_PROFILE")?;
+    let etc_source = sandbox_env_path("SANDBOX_ETC")?;
+    let entrypoint = sandbox_env_path("SANDBOX_ENTRYPOINT")?;
+
     let uid = getuid().as_raw();
     let gid = getgid().as_raw();
     let user = User::from_uid(Uid::from_raw(uid))
@@ -309,7 +323,7 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
 
     let etc_dir = tmpdir.path().join("etc");
     fs::create_dir(&etc_dir).context("failed to create etc dir")?;
-    etc::build_etc(&etc_dir, Path::new(SANDBOX_ETC))?;
+    etc::build_etc(&etc_dir, &etc_source)?;
 
     let home_dir = tmpdir.path().join("home");
     fs::create_dir(&home_dir).context("failed to create home dir")?;
@@ -379,6 +393,8 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
         etc_dir,
         home_dir,
         data_dir,
+        profile,
+        entrypoint,
     };
 
     let bwrap_args = build_bwrap_args(
@@ -410,6 +426,8 @@ mod tests {
             etc_dir: PathBuf::from("/tmp/sandbox/etc"),
             home_dir: PathBuf::from("/tmp/sandbox/home"),
             data_dir: PathBuf::from("/tmp/sandbox/data"),
+            profile: PathBuf::from("/nix/store/fake-profile"),
+            entrypoint: PathBuf::from("/nix/store/fake-entrypoint/bin/sandbox-entrypoint"),
         }
     }
 
@@ -451,9 +469,20 @@ mod tests {
         assert!(has_triple(
             &args,
             "--ro-bind",
-            SANDBOX_PROFILE,
+            "/nix/store/fake-profile",
             "/run/current-system/sw"
         ));
+    }
+
+    #[test]
+    fn bwrap_args_entrypoint_uses_context_path() {
+        let ctx = test_ctx();
+        let args = default_args(&ctx);
+        let sep_pos = args.iter().position(|a| a == "--").unwrap();
+        assert_eq!(
+            args[sep_pos + 1],
+            "/nix/store/fake-entrypoint/bin/sandbox-entrypoint"
+        );
     }
 
     #[test]
@@ -649,14 +678,6 @@ mod tests {
         assert_eq!(args[len - 3], "bash");
         assert_eq!(args[len - 2], "-c");
         assert_eq!(args[len - 1], "echo hi");
-    }
-
-    #[test]
-    fn bwrap_args_entrypoint_after_separator() {
-        let ctx = test_ctx();
-        let args = default_args(&ctx);
-        let sep_pos = args.iter().position(|a| a == "--").unwrap();
-        assert!(args[sep_pos + 1].ends_with("/bin/sandbox-entrypoint"));
     }
 
     #[test]

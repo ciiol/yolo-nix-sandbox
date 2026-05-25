@@ -16,6 +16,7 @@ use crate::uid::{SubIdRange, WideUidConfig};
 /// 1. [0, id) -> [range.start, range.start + id) — subordinate IDs before real ID
 /// 2. id -> id — identity map for the real user
 /// 3. [id+1, ...) -> [range.start + id, ...) — subordinate IDs after real ID
+///
 /// Requires id >= 2 and range.count > id (enforced by is_valid_wide_uid).
 fn id_map_args(child_pid: u32, id: u32, range: &SubIdRange) -> Vec<String> {
     debug_assert!(id >= 2, "id_map_args requires id >= 2, got {id}");

@@ -20,7 +20,6 @@ just fmt
 
 - Linux only
 - Tests require a running Nix daemon, bwrap user namespaces
-- The Rust binary cannot run outside `nix develop` or `nix build` because the `SANDBOX_*` env vars must point to valid Nix store paths
 
 ## Code Comments
 

@@ -119,7 +119,7 @@ def test_passwd_contains_current_user(yolo):
 def test_uv_config_content(yolo):
     """/etc/uv/uv.toml contains the only-system python preference."""
     result = yolo("cat", "/etc/uv/uv.toml")
-    assert "python-preference = 'only-system'" in result.stdout
+    assert 'python-preference = "only-system"' in result.stdout
 
 
 def test_man_page_lookup(yolo):
