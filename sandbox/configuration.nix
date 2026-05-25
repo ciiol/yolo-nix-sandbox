@@ -30,8 +30,13 @@
   };
 
   environment = {
-    enableAllTerminfo = true;
     variables.SHELL = "/run/current-system/sw/bin/bash";
+
+    extraInit = ''
+      if [ -n "''${YOLO_HOST_TERMINFO_DIRS:-}" ]; then
+        export TERMINFO_DIRS="$YOLO_HOST_TERMINFO_DIRS:''${TERMINFO_DIRS:-}"
+      fi
+    '';
 
     etc."uv/uv.toml".source =
       let

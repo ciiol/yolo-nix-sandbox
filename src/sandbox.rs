@@ -148,7 +148,39 @@ fn collect_terminal_vars() -> Vec<(String, String)> {
             }
         }
     }
+    if let Ok(raw) = env::var("TERMINFO_DIRS") {
+        if let Some(resolved) = resolve_host_terminfo_dirs(&raw) {
+            vars.push(("YOLO_HOST_TERMINFO_DIRS".into(), resolved));
+        }
+    }
     vars
+}
+
+/// Resolves a colon-separated list of terminfo directories to their canonical
+/// `/nix/store` paths. Entries that fail to canonicalize (broken symlinks,
+/// missing dirs) are silently skipped. Duplicate canonical targets are kept
+/// only once, in first-seen order. Returns `None` if no entries survive.
+///
+/// The result is intended to be passed into the sandbox under
+/// `YOLO_HOST_TERMINFO_DIRS` and merged back into `TERMINFO_DIRS` from
+/// `environment.extraInit` (a raw `TERMINFO_DIRS` setenv would be clobbered
+/// by `/etc/set-environment`).
+fn resolve_host_terminfo_dirs(raw: &str) -> Option<String> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut out = Vec::new();
+    for entry in raw.split(':').filter(|s| !s.is_empty()) {
+        if let Ok(canonical) = std::fs::canonicalize(entry) {
+            let s = canonical.to_string_lossy().into_owned();
+            if seen.insert(s.clone()) {
+                out.push(s);
+            }
+        }
+    }
+    if out.is_empty() {
+        None
+    } else {
+        Some(out.join(":"))
+    }
 }
 
 /// Parameters for bwrap argument construction, extracted for testability.
@@ -613,7 +645,13 @@ mod tests {
     #[test]
     fn bwrap_args_environment() {
         let ctx = test_ctx();
-        let term_vars = vec![("TERM".into(), "xterm-256color".into())];
+        let term_vars = vec![
+            ("TERM".into(), "xterm-256color".into()),
+            (
+                "YOLO_HOST_TERMINFO_DIRS".into(),
+                "/nix/store/aaa-share-terminfo:/nix/store/bbb-share-terminfo".into(),
+            ),
+        ];
         let args = build_bwrap_args(&ctx, &[], &term_vars, false, false, &["bash".into()]);
         assert!(args.contains(&"--clearenv".to_string()));
         assert!(has_triple(&args, "--setenv", "HOME", "/home/testuser"));
@@ -625,6 +663,21 @@ mod tests {
             "/run/user/1000"
         ));
         assert!(has_triple(&args, "--setenv", "TERM", "xterm-256color"));
+        assert!(has_triple(
+            &args,
+            "--setenv",
+            "YOLO_HOST_TERMINFO_DIRS",
+            "/nix/store/aaa-share-terminfo:/nix/store/bbb-share-terminfo"
+        ));
+    }
+
+    #[test]
+    fn bwrap_args_no_terminfo_dirs() {
+        let ctx = test_ctx();
+        let term_vars = vec![("TERM".into(), "xterm-256color".into())];
+        let args = build_bwrap_args(&ctx, &[], &term_vars, false, false, &["bash".into()]);
+        assert!(has_triple(&args, "--setenv", "TERM", "xterm-256color"));
+        assert!(!args.iter().any(|a| a == "YOLO_HOST_TERMINFO_DIRS"));
     }
 
     #[test]
@@ -763,5 +816,68 @@ mod tests {
             fs::set_permissions(&inner, fs::Permissions::from_mode(0o000)).unwrap();
         }
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn resolve_host_terminfo_dirs_basic() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target1 = tmp.path().join("target1");
+        let target2 = tmp.path().join("target2");
+        fs::create_dir(&target1).unwrap();
+        fs::create_dir(&target2).unwrap();
+        let link1 = tmp.path().join("link1");
+        let link2 = tmp.path().join("link2");
+        std::os::unix::fs::symlink(&target1, &link1).unwrap();
+        std::os::unix::fs::symlink(&target2, &link2).unwrap();
+
+        let raw = format!("{}:{}", link1.display(), link2.display());
+        let result = resolve_host_terminfo_dirs(&raw).unwrap();
+
+        let expected = format!(
+            "{}:{}",
+            fs::canonicalize(&target1).unwrap().display(),
+            fs::canonicalize(&target2).unwrap().display()
+        );
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn resolve_host_terminfo_dirs_skips_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let valid = tmp.path().join("valid");
+        fs::create_dir(&valid).unwrap();
+        let bogus = tmp.path().join("does-not-exist");
+
+        let raw = format!("{}:{}", bogus.display(), valid.display());
+        let result = resolve_host_terminfo_dirs(&raw).unwrap();
+
+        assert_eq!(
+            result,
+            fs::canonicalize(&valid).unwrap().display().to_string()
+        );
+    }
+
+    #[test]
+    fn resolve_host_terminfo_dirs_dedup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("target");
+        fs::create_dir(&target).unwrap();
+        let linka = tmp.path().join("linka");
+        let linkb = tmp.path().join("linkb");
+        std::os::unix::fs::symlink(&target, &linka).unwrap();
+        std::os::unix::fs::symlink(&target, &linkb).unwrap();
+
+        let raw = format!("{}:{}", linka.display(), linkb.display());
+        let result = resolve_host_terminfo_dirs(&raw).unwrap();
+
+        let canonical = fs::canonicalize(&target).unwrap().display().to_string();
+        assert_eq!(result, canonical);
+    }
+
+    #[test]
+    fn resolve_host_terminfo_dirs_empty() {
+        assert!(resolve_host_terminfo_dirs("").is_none());
+        assert!(resolve_host_terminfo_dirs(":").is_none());
+        assert!(resolve_host_terminfo_dirs("/nonexistent/a:/nonexistent/b").is_none());
     }
 }
