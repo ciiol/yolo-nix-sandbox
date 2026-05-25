@@ -4,7 +4,7 @@
   fetchFromGitHub,
 }:
 let
-  version = "1.3.0";
+  version = "1.4.1";
 in
 buildGoModule {
   pname = "revdiff";
@@ -14,7 +14,7 @@ buildGoModule {
     owner = "umputun";
     repo = "revdiff";
     tag = "v${version}";
-    hash = "sha256-lcqkvQ5jLP3sA9WeFcp1PRPIvtq7vWjl7M+9juBYXL0=";
+    hash = "sha256-m4ivAEnK+NiFhkZDq7ZDO1Kl1uq2SxsFq3wSPBBzA8c=";
   };
 
   vendorHash = null;
