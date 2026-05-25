@@ -127,3 +127,22 @@ def test_man_page_lookup(yolo):
     result = yolo("man", "-w", "bash", check=False)
     assert result.returncode == 0, f"man -w bash failed: {result.stderr}"
     assert result.stdout.strip(), "man -w bash should return a path"
+
+
+def test_usr_bin_env_exists(yolo):
+    """/usr/bin/env is a symlink into the Nix store and is executable."""
+    target = yolo("readlink", "/usr/bin/env").stdout.strip()
+    assert target.startswith("/nix/store/"), f"expected /nix/store/ target, got {target!r}"
+    assert target.endswith("/bin/env"), f"expected .../bin/env, got {target!r}"
+    yolo("test", "-x", "/usr/bin/env")
+
+
+def test_usr_bin_env_runs_shebang(yolo):
+    """A `#!/usr/bin/env sh` shebang script under /tmp runs successfully."""
+    cmd = (
+        r"printf '#!/usr/bin/env sh\necho ok\n' > /tmp/shebang_test"
+        " && chmod +x /tmp/shebang_test"
+        " && /tmp/shebang_test"
+    )
+    result = yolo("bash", "-c", cmd)
+    assert result.stdout.strip() == "ok"

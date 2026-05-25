@@ -11,7 +11,7 @@ use crate::bwrap;
 use crate::etc;
 use crate::uid;
 
-fn validate_sandbox_env_path(name: &str, value: Option<String>) -> Result<PathBuf> {
+fn parse_required_env_path(name: &str, value: Option<String>) -> Result<PathBuf> {
     let val = value.ok_or_else(|| anyhow::anyhow!("{name} env var is not set"))?;
     if val.is_empty() {
         anyhow::bail!("{name} env var is empty");
@@ -20,7 +20,15 @@ fn validate_sandbox_env_path(name: &str, value: Option<String>) -> Result<PathBu
 }
 
 fn sandbox_env_path(name: &str) -> Result<PathBuf> {
-    validate_sandbox_env_path(name, env::var(name).ok())
+    parse_required_env_path(name, env::var(name).ok())
+}
+
+fn parse_optional_env_path(value: Option<String>) -> Option<PathBuf> {
+    value.filter(|v| !v.is_empty()).map(PathBuf::from)
+}
+
+fn sandbox_env_path_optional(name: &str) -> Option<PathBuf> {
+    parse_optional_env_path(env::var(name).ok())
 }
 
 /// RAII temp directory matching the bash EXIT trap: chmod -R u+rwx then rm -rf.
@@ -194,6 +202,7 @@ struct SandboxContext {
     data_dir: PathBuf,
     profile: PathBuf,
     entrypoint: PathBuf,
+    usrbinenv: Option<PathBuf>,
 }
 
 fn build_bwrap_args(
@@ -328,6 +337,14 @@ fn build_bwrap_args(
         ]);
     }
 
+    if let Some(path) = &ctx.usrbinenv {
+        args.extend([
+            "--symlink".into(),
+            path.display().to_string(),
+            "/usr/bin/env".into(),
+        ]);
+    }
+
     args.push("--".into());
     args.push(ctx.entrypoint.display().to_string());
     if use_direnv {
@@ -416,6 +433,7 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
 
     let optional_mounts = detect_optional_mounts();
     let terminal_vars = collect_terminal_vars();
+    let usrbinenv = sandbox_env_path_optional("SANDBOX_USRBINENV");
 
     let ctx = SandboxContext {
         user: user.name,
@@ -427,6 +445,7 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
         data_dir,
         profile,
         entrypoint,
+        usrbinenv,
     };
 
     let bwrap_args = build_bwrap_args(
@@ -460,6 +479,7 @@ mod tests {
             data_dir: PathBuf::from("/tmp/sandbox/data"),
             profile: PathBuf::from("/nix/store/fake-profile"),
             entrypoint: PathBuf::from("/nix/store/fake-entrypoint/bin/sandbox-entrypoint"),
+            usrbinenv: None,
         }
     }
 
@@ -879,5 +899,42 @@ mod tests {
         assert!(resolve_host_terminfo_dirs("").is_none());
         assert!(resolve_host_terminfo_dirs(":").is_none());
         assert!(resolve_host_terminfo_dirs("/nonexistent/a:/nonexistent/b").is_none());
+    }
+
+    #[test]
+    fn bwrap_args_usrbinenv_symlink_when_set() {
+        let mut ctx = test_ctx();
+        ctx.usrbinenv = Some(PathBuf::from("/nix/store/fake-coreutils/bin/env"));
+        let args = default_args(&ctx);
+        assert!(has_triple(
+            &args,
+            "--symlink",
+            "/nix/store/fake-coreutils/bin/env",
+            "/usr/bin/env"
+        ));
+        let symlink_pos = args.iter().position(|a| a == "--symlink").unwrap();
+        let sep_pos = args.iter().position(|a| a == "--").unwrap();
+        assert!(symlink_pos < sep_pos);
+    }
+
+    #[test]
+    fn bwrap_args_usrbinenv_omitted_when_none() {
+        let ctx = test_ctx();
+        let args = default_args(&ctx);
+        assert!(
+            !args
+                .windows(3)
+                .any(|w| w[0] == "--symlink" && w[2] == "/usr/bin/env")
+        );
+    }
+
+    #[test]
+    fn parse_optional_env_path_treats_none_and_empty_as_absent() {
+        assert!(parse_optional_env_path(None).is_none());
+        assert!(parse_optional_env_path(Some(String::new())).is_none());
+        assert_eq!(
+            parse_optional_env_path(Some("/nix/store/x/bin/env".into())),
+            Some(PathBuf::from("/nix/store/x/bin/env"))
+        );
     }
 }

@@ -31,5 +31,7 @@ in
     SANDBOX_PROFILE = "${nixos.config.system.path}";
     SANDBOX_ETC = "${nixos.config.system.build.etc}";
     SANDBOX_ENTRYPOINT = "${entrypoint}/bin/sandbox-entrypoint";
+    SANDBOX_USRBINENV =
+      if nixos.config.environment.usrbinenv == null then "" else nixos.config.environment.usrbinenv;
   };
 }

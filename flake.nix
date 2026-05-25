@@ -78,7 +78,8 @@
                 } \
                 --set SANDBOX_PROFILE "${env.SANDBOX_PROFILE}" \
                 --set SANDBOX_ETC "${env.SANDBOX_ETC}" \
-                --set SANDBOX_ENTRYPOINT "${env.SANDBOX_ENTRYPOINT}"
+                --set SANDBOX_ENTRYPOINT "${env.SANDBOX_ENTRYPOINT}" \
+                --set SANDBOX_USRBINENV "${env.SANDBOX_USRBINENV}"
             '';
           };
 
