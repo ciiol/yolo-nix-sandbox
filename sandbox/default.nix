@@ -16,6 +16,7 @@ let
       }
       ./modules/claude-code.nix
       ./modules/codex.nix
+      ./modules/pi.nix
       ./modules/ralphex.nix
       ./modules/revdiff.nix
       ./configuration.nix

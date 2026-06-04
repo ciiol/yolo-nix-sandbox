@@ -97,6 +97,7 @@ yolo claude [args...]      # Run Claude Code in the sandbox
 yolo codex [args...]       # Run Codex in the sandbox
 yolo gemini [args...]      # Run Gemini in the sandbox
 yolo ralphex [args...]     # Run Ralphex in the sandbox
+yolo pi [args...]          # Run pi-coding-agent in the sandbox
 ```
 
 The sandbox mounts the current working directory read-write, so your project

@@ -15,6 +15,7 @@ TOOLS = [
     "claude",
     "codex",
     "gemini",
+    "pi",
     "ralphex",
     "revdiff",
     "direnv",

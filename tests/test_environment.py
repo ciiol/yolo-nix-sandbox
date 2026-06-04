@@ -70,6 +70,13 @@ def test_optional_terminal_var_matches_host(yolo, sandbox_env, var):
     )
 
 
+def test_pi_skips_version_check_by_default(yolo):
+    """Default config wraps pi to skip its (unactionable) version check, stays online."""
+    script = yolo("bash", "-c", 'cat "$(command -v pi)"').stdout
+    assert "PI_SKIP_VERSION_CHECK" in script
+    assert "PI_OFFLINE" not in script
+
+
 def test_shell_is_bash(yolo):
     """$SHELL points to bash (set via environment.variables in sandbox.nix)."""
     result = yolo("printenv", "SHELL")

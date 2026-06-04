@@ -8,6 +8,7 @@ PERSISTENCE_PATHS = [
     ".claude",
     ".codex",
     ".gemini",
+    ".pi",
     ".config/ralphex",
     ".config/gh",
     ".config/revdiff",

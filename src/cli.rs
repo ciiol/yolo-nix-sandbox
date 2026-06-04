@@ -19,22 +19,32 @@ pub enum Command {
         args: Vec<String>,
     },
     /// Run Claude with --dangerously-skip-permissions
+    #[command(disable_help_flag = true)]
     Claude {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
     /// Run Codex with --yolo
+    #[command(disable_help_flag = true)]
     Codex {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
     /// Run Gemini with --yolo
+    #[command(disable_help_flag = true)]
     Gemini {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
     /// Run Ralphex
+    #[command(disable_help_flag = true)]
     Ralphex {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Run pi-coding-agent
+    #[command(disable_help_flag = true)]
+    Pi {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -64,6 +74,11 @@ impl Command {
             }
             Command::Ralphex { args } => {
                 let mut resolved = vec!["ralphex".to_string()];
+                resolved.extend(args);
+                resolved
+            }
+            Command::Pi { args } => {
+                let mut resolved = vec!["pi".to_string()];
                 resolved.extend(args);
                 resolved
             }
@@ -155,6 +170,39 @@ mod tests {
         let cli = parse(&["yolo", "ralphex", "--plan", "foo"]).unwrap();
         let resolved = cli.command.resolve();
         assert_eq!(resolved, vec!["ralphex", "--plan", "foo"]);
+    }
+
+    #[test]
+    fn pi_no_args() {
+        let cli = parse(&["yolo", "pi"]).unwrap();
+        let resolved = cli.command.resolve();
+        assert_eq!(resolved, vec!["pi"]);
+    }
+
+    #[test]
+    fn pi_with_args() {
+        let cli = parse(&["yolo", "pi", "--model", "foo"]).unwrap();
+        let resolved = cli.command.resolve();
+        assert_eq!(resolved, vec!["pi", "--model", "foo"]);
+    }
+
+    #[test]
+    fn passthrough_subcommands_forward_help_flag() {
+        // `--help` must reach the wrapped tool, not be intercepted by clap's
+        // generated help for the subcommand.
+        for (sub, expected) in [
+            (
+                "claude",
+                vec!["claude", "--dangerously-skip-permissions", "--help"],
+            ),
+            ("codex", vec!["codex", "--yolo", "--help"]),
+            ("gemini", vec!["gemini", "--yolo", "--help"]),
+            ("ralphex", vec!["ralphex", "--help"]),
+            ("pi", vec!["pi", "--help"]),
+        ] {
+            let cli = parse(&["yolo", sub, "--help"]).unwrap();
+            assert_eq!(cli.command.resolve(), expected, "subcommand {sub}");
+        }
     }
 
     #[test]
