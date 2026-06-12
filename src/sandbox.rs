@@ -141,9 +141,6 @@ fn detect_optional_mounts() -> Vec<(MountType, &'static str)> {
     if Path::new("/dev/net/tun").exists() {
         mounts.push((MountType::DevBind, "/dev/net/tun"));
     }
-    if Path::new("/run/wrappers").is_dir() {
-        mounts.push((MountType::RoBind, "/run/wrappers"));
-    }
     mounts
 }
 
@@ -759,7 +756,6 @@ mod tests {
         let mounts = vec![
             (MountType::RoBind, "/sys/fs/cgroup"),
             (MountType::DevBind, "/dev/net/tun"),
-            (MountType::RoBind, "/run/wrappers"),
         ];
         let args = build_bwrap_args(&ctx, &mounts, &[], false, false, &["bash".into()]);
         assert!(has_triple(
@@ -773,12 +769,6 @@ mod tests {
             "--dev-bind",
             "/dev/net/tun",
             "/dev/net/tun"
-        ));
-        assert!(has_triple(
-            &args,
-            "--ro-bind",
-            "/run/wrappers",
-            "/run/wrappers"
         ));
     }
 
