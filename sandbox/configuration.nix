@@ -57,7 +57,6 @@
       nix
       cacert
       curl
-      gemini-cli
 
       # Search & navigation
       ripgrep

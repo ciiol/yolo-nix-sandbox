@@ -30,12 +30,6 @@ pub enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Run Gemini with --yolo
-    #[command(disable_help_flag = true)]
-    Gemini {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
     /// Run Ralphex
     #[command(disable_help_flag = true)]
     Ralphex {
@@ -64,11 +58,6 @@ impl Command {
             }
             Command::Codex { args } => {
                 let mut resolved = vec!["codex".to_string(), "--yolo".to_string()];
-                resolved.extend(args);
-                resolved
-            }
-            Command::Gemini { args } => {
-                let mut resolved = vec!["gemini".to_string(), "--yolo".to_string()];
                 resolved.extend(args);
                 resolved
             }
@@ -145,20 +134,6 @@ mod tests {
     }
 
     #[test]
-    fn gemini_no_args() {
-        let cli = parse(&["yolo", "gemini"]).unwrap();
-        let resolved = cli.command.resolve();
-        assert_eq!(resolved, vec!["gemini", "--yolo"]);
-    }
-
-    #[test]
-    fn gemini_with_args() {
-        let cli = parse(&["yolo", "gemini", "extra"]).unwrap();
-        let resolved = cli.command.resolve();
-        assert_eq!(resolved, vec!["gemini", "--yolo", "extra"]);
-    }
-
-    #[test]
     fn ralphex_no_args() {
         let cli = parse(&["yolo", "ralphex"]).unwrap();
         let resolved = cli.command.resolve();
@@ -196,7 +171,6 @@ mod tests {
                 vec!["claude", "--dangerously-skip-permissions", "--help"],
             ),
             ("codex", vec!["codex", "--yolo", "--help"]),
-            ("gemini", vec!["gemini", "--yolo", "--help"]),
             ("ralphex", vec!["ralphex", "--help"]),
             ("pi", vec!["pi", "--help"]),
         ] {

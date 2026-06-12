@@ -2,7 +2,7 @@
 
 import pytest
 
-SUBCOMMANDS = ["claude", "codex", "gemini", "ralphex", "pi"]
+SUBCOMMANDS = ["claude", "codex", "ralphex", "pi"]
 
 
 @pytest.mark.parametrize("tool", SUBCOMMANDS)

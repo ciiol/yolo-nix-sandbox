@@ -267,7 +267,6 @@ fn build_bwrap_args(
     for (subdir, target) in [
         ("claude", format!("{home}/.claude")),
         ("codex", format!("{home}/.codex")),
-        ("gemini", format!("{home}/.gemini")),
         ("pi", format!("{home}/.pi")),
         ("ralphex", format!("{home}/.config/ralphex")),
         ("gh", format!("{home}/.config/gh")),
@@ -388,7 +387,6 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
     for subdir in [
         "claude",
         "codex",
-        "gemini",
         "pi",
         "ralphex",
         "gh",
@@ -589,12 +587,6 @@ mod tests {
             "--bind",
             "/tmp/sandbox/data/codex",
             "/home/testuser/.codex"
-        ));
-        assert!(has_triple(
-            &args,
-            "--bind",
-            "/tmp/sandbox/data/gemini",
-            "/home/testuser/.gemini"
         ));
         assert!(has_triple(
             &args,

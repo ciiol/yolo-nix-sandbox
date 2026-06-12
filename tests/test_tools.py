@@ -14,7 +14,6 @@ TOOLS = [
     "tar",
     "claude",
     "codex",
-    "gemini",
     "pi",
     "ralphex",
     "revdiff",
