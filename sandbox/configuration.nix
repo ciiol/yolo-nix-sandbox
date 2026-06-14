@@ -27,6 +27,12 @@
       nix-direnv.enable = true;
     };
     less.enable = true;
+    # systemd-ssh-proxy (on by default) makes ssh Include a /nix/store config
+    # file owned by host root. In the bwrap userns that uid maps to the
+    # unmapped overflow uid, so OpenSSH's strict-permission check fails fatally
+    # and aborts every connection. The proxy only reaches local VMs/containers,
+    # which don't exist here, so drop the Include entirely.
+    ssh.systemd-ssh-proxy.enable = false;
   };
 
   environment = {
