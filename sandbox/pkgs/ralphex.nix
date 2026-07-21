@@ -4,7 +4,7 @@
   fetchFromGitHub,
 }:
 let
-  version = "1.6.0";
+  version = "1.6.1";
 in
 buildGoModule {
   pname = "ralphex";
@@ -14,7 +14,7 @@ buildGoModule {
     owner = "umputun";
     repo = "ralphex";
     tag = "v${version}";
-    hash = "sha256-RUl5BVGc5EjeXZNjfC2WVZrrSXxR1mQyABkIxIT2NyQ=";
+    hash = "sha256-M1VeZgpNv64ZbcNvhzscnhTJhuR6yrh+clAWAce7vxI=";
   };
 
   vendorHash = null;
