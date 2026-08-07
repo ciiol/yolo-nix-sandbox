@@ -6,7 +6,6 @@ let
     ralphex-plugin = final.callPackage ./pkgs/ralphex-plugin.nix { };
     revdiff = final.callPackage ./pkgs/revdiff.nix { };
     revdiff-plugin = final.callPackage ./pkgs/revdiff-plugin.nix { };
-    revdiff-planning-plugin = final.callPackage ./pkgs/revdiff-planning-plugin.nix { };
   };
   nixos = nixpkgs.lib.nixosSystem {
     modules = [
