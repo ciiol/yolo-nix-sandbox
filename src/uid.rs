@@ -41,18 +41,15 @@ fn parse_subid_line(line: &str, user: &str) -> Option<SubIdRange> {
 }
 
 fn command_exists(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .map(|path| {
-            std::env::split_paths(&path).any(|dir| {
-                let candidate = dir.join(name);
-                candidate.is_file()
-                    && candidate
-                        .metadata()
-                        .map(|m| m.permissions().mode() & 0o111 != 0)
-                        .unwrap_or(false)
-            })
+    std::env::var_os("PATH").is_some_and(|path| {
+        std::env::split_paths(&path).any(|dir| {
+            let candidate = dir.join(name);
+            candidate.is_file()
+                && candidate
+                    .metadata()
+                    .is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
         })
-        .unwrap_or(false)
+    })
 }
 
 fn is_valid_wide_uid(uid: u32, gid: u32, uid_range: &SubIdRange, gid_range: &SubIdRange) -> bool {
@@ -105,7 +102,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = write_subid_file(tmp.path(), "subuid", "alice:100000:65536\n");
         let range = get_subid_range(&path, "alice").unwrap();
-        assert_eq!(range.start, 100000);
+        assert_eq!(range.start, 100_000);
         assert_eq!(range.count, 65536);
     }
 
@@ -128,7 +125,7 @@ mod tests {
         assert!(get_subid_range(&path, "alice").is_none());
         assert!(get_subid_range(&path, "bob").is_none());
         let range = get_subid_range(&path, "carol").unwrap();
-        assert_eq!(range.start, 200000);
+        assert_eq!(range.start, 200_000);
         assert_eq!(range.count, 65536);
     }
 
@@ -139,7 +136,7 @@ mod tests {
                         alice:200000:32768\n";
         let path = write_subid_file(tmp.path(), "subuid", contents);
         let range = get_subid_range(&path, "alice").unwrap();
-        assert_eq!(range.start, 200000);
+        assert_eq!(range.start, 200_000);
         assert_eq!(range.count, 32768);
     }
 
@@ -159,11 +156,11 @@ mod tests {
     #[test]
     fn valid_wide_uid_typical() {
         let uid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let gid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         assert!(is_valid_wide_uid(1000, 1000, &uid_range, &gid_range));
@@ -172,11 +169,11 @@ mod tests {
     #[test]
     fn valid_wide_uid_boundary_uid_2() {
         let uid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let gid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         assert!(is_valid_wide_uid(2, 2, &uid_range, &gid_range));
@@ -185,11 +182,11 @@ mod tests {
     #[test]
     fn invalid_wide_uid_uid_below_2() {
         let uid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let gid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         assert!(!is_valid_wide_uid(1, 1000, &uid_range, &gid_range));
@@ -199,11 +196,11 @@ mod tests {
     #[test]
     fn invalid_wide_uid_gid_below_2() {
         let uid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let gid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         assert!(!is_valid_wide_uid(1000, 1, &uid_range, &gid_range));
@@ -213,11 +210,11 @@ mod tests {
     #[test]
     fn invalid_wide_uid_uid_ge_count() {
         let uid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 1000,
         };
         let gid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         // uid == count
@@ -229,11 +226,11 @@ mod tests {
     #[test]
     fn invalid_wide_uid_gid_ge_count() {
         let uid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let gid_range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 500,
         };
         // gid == count

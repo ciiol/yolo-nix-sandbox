@@ -17,7 +17,7 @@ use crate::uid::{SubIdRange, WideUidConfig};
 /// 2. id -> id — identity map for the real user
 /// 3. [id+1, ...) -> [range.start + id, ...) — subordinate IDs after real ID
 ///
-/// Requires id >= 2 and range.count > id (enforced by is_valid_wide_uid).
+/// Requires id >= 2 and range.count > id (enforced by `is_valid_wide_uid`).
 fn id_map_args(child_pid: u32, id: u32, range: &SubIdRange) -> Vec<String> {
     debug_assert!(id >= 2, "id_map_args requires id >= 2, got {id}");
     debug_assert!(
@@ -185,7 +185,7 @@ pub fn run_wide_uid(
         serde_json::from_str(&info_json).context("failed to parse bwrap info JSON")?;
     let child_pid: u32 = info
         .get("child-pid")
-        .and_then(|v| v.as_u64())
+        .and_then(serde_json::Value::as_u64)
         .context("missing child-pid in bwrap info")?
         .try_into()
         .context("child-pid out of u32 range")?;
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn id_map_args_typical() {
         let range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let args = id_map_args(42, 1000, &range);
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn id_map_args_minimum_uid() {
         let range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let args = id_map_args(99, 2, &range);
@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn id_map_args_total_mapped_count() {
         let range = SubIdRange {
-            start: 200000,
+            start: 200_000,
             count: 10000,
         };
         let uid = 500u32;
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn id_map_args_identity_range() {
         let range = SubIdRange {
-            start: 100000,
+            start: 100_000,
             count: 65536,
         };
         let uid = 1000u32;

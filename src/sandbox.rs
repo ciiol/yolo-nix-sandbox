@@ -82,21 +82,20 @@ impl Drop for SandboxTempDir {
 
 /// Generate /etc/subuid or /etc/subgid content for wide-UID mode.
 /// Splits around the real id: [1..id) and [id+1..count)
-/// ID 0 is excluded (kernel rejects nested uid_map writes referencing parent-namespace UID 0).
-/// Requires id >= 2 and count > id (enforced by is_valid_wide_uid).
+/// ID 0 is excluded (kernel rejects nested `uid_map` writes referencing parent-namespace UID 0).
+/// Requires id >= 2 and count > id (enforced by `is_valid_wide_uid`).
 fn gen_subid_content(user: &str, id: u32, count: u32) -> String {
     debug_assert!(id >= 2, "gen_subid_content requires id >= 2, got {id}");
     debug_assert!(
         count > id,
         "gen_subid_content requires count > id, got count={count}, id={id}"
     );
-    format!("{user}:1:{}\n{user}:{}:{}\n", id - 1, id + 1, count - id,)
+    format!("{user}:1:{}\n{user}:{}:{}\n", id - 1, id + 1, count - id)
 }
 
 fn detect_direnv(pwd: &Path) -> bool {
-    let direnv_dir = match env::var("DIRENV_DIR") {
-        Ok(v) => v,
-        Err(_) => return false,
+    let Ok(direnv_dir) = env::var("DIRENV_DIR") else {
+        return false;
     };
 
     if direnv_dir != format!("-{}", pwd.display()) {
@@ -107,26 +106,24 @@ fn detect_direnv(pwd: &Path) -> bool {
         return false;
     }
 
-    let output = match std::process::Command::new("direnv")
+    let Ok(output) = std::process::Command::new("direnv")
         .args(["status", "--json"])
         .stderr(Stdio::null())
         .output()
-    {
-        Ok(o) => o,
-        Err(_) => return false,
+    else {
+        return false;
     };
 
     if !output.status.success() {
         return false;
     }
 
-    let json: serde_json::Value = match serde_json::from_slice(&output.stdout) {
-        Ok(v) => v,
-        Err(_) => return false,
+    let Ok(json) = serde_json::from_slice::<serde_json::Value>(&output.stdout) else {
+        return false;
     };
 
     json.pointer("/state/foundRC/allowed")
-        .and_then(|v| v.as_i64())
+        .and_then(serde_json::Value::as_i64)
         .is_some_and(|v| v == 0)
 }
 
@@ -203,6 +200,48 @@ struct SandboxContext {
     usrbinenv: Option<PathBuf>,
 }
 
+fn persistent_state_mounts(home: &str, data_dir: &Path) -> Vec<String> {
+    let ssh = data_dir.join("ssh");
+    let mut args: Vec<String> = Vec::new();
+
+    for (subdir, target) in [
+        ("claude", format!("{home}/.claude")),
+        ("codex", format!("{home}/.codex")),
+        ("pi", format!("{home}/.pi")),
+        ("ralphex", format!("{home}/.config/ralphex")),
+        ("gh", format!("{home}/.config/gh")),
+        ("revdiff", format!("{home}/.config/revdiff")),
+        ("sops-age", format!("{home}/.config/sops/age")),
+        ("containers", format!("{home}/.local/share/containers")),
+    ] {
+        args.extend([
+            "--bind".into(),
+            data_dir.join(subdir).display().to_string(),
+            target,
+        ]);
+    }
+
+    args.extend([
+        "--ro-bind".into(),
+        data_dir.join("git").display().to_string(),
+        format!("{home}/.config/git"),
+        "--ro-bind".into(),
+        ssh.display().to_string(),
+        format!("{home}/.ssh"),
+    ]);
+
+    args.extend([
+        "--bind".into(),
+        ssh.join("known_hosts").display().to_string(),
+        format!("{home}/.ssh/known_hosts"),
+        "--bind".into(),
+        ssh.join("allowed_signers").display().to_string(),
+        format!("{home}/.ssh/allowed_signers"),
+    ]);
+
+    args
+}
+
 fn build_bwrap_args(
     ctx: &SandboxContext,
     optional_mounts: &[(MountType, &str)],
@@ -214,8 +253,6 @@ fn build_bwrap_args(
     let home = &ctx.home;
     let pwd = ctx.pwd.display().to_string();
     let xdg_runtime_dir = format!("/run/user/{}", ctx.uid);
-    let data = &ctx.data_dir;
-    let ssh = data.join("ssh");
 
     let mut args: Vec<String> = Vec::new();
 
@@ -262,40 +299,7 @@ fn build_bwrap_args(
         pwd,
     ]);
 
-    for (subdir, target) in [
-        ("claude", format!("{home}/.claude")),
-        ("codex", format!("{home}/.codex")),
-        ("pi", format!("{home}/.pi")),
-        ("ralphex", format!("{home}/.config/ralphex")),
-        ("gh", format!("{home}/.config/gh")),
-        ("revdiff", format!("{home}/.config/revdiff")),
-        ("sops-age", format!("{home}/.config/sops/age")),
-        ("containers", format!("{home}/.local/share/containers")),
-    ] {
-        args.extend([
-            "--bind".into(),
-            data.join(subdir).display().to_string(),
-            target,
-        ]);
-    }
-
-    args.extend([
-        "--ro-bind".into(),
-        data.join("git").display().to_string(),
-        format!("{home}/.config/git"),
-        "--ro-bind".into(),
-        data.join("ssh").display().to_string(),
-        format!("{home}/.ssh"),
-    ]);
-
-    args.extend([
-        "--bind".into(),
-        ssh.join("known_hosts").display().to_string(),
-        format!("{home}/.ssh/known_hosts"),
-        "--bind".into(),
-        ssh.join("allowed_signers").display().to_string(),
-        format!("{home}/.ssh/allowed_signers"),
-    ]);
+    args.extend(persistent_state_mounts(home, &ctx.data_dir));
 
     args.extend(["--dir".into(), xdg_runtime_dir.clone()]);
 
@@ -353,7 +357,7 @@ fn build_bwrap_args(
     args
 }
 
-pub fn run(command: Vec<String>) -> Result<ExitStatus> {
+pub fn run(command: &[String]) -> Result<ExitStatus> {
     let profile = sandbox_env_path("SANDBOX_PROFILE")?;
     let etc_source = sandbox_env_path("SANDBOX_ETC")?;
     let entrypoint = sandbox_env_path("SANDBOX_ENTRYPOINT")?;
@@ -375,12 +379,11 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
     let home_dir = tmpdir.path().join("home");
     fs::create_dir(&home_dir).context("failed to create home dir")?;
 
-    let data_dir = env::var("XDG_DATA_HOME")
-        .ok()
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(&home).join(".local/share"))
-        .join("yolo");
+    let data_home = match env::var("XDG_DATA_HOME") {
+        Ok(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => PathBuf::from(&home).join(".local/share"),
+    };
+    let data_dir = data_home.join("yolo");
 
     for subdir in [
         "claude",
@@ -452,7 +455,7 @@ pub fn run(command: Vec<String>) -> Result<ExitStatus> {
         &terminal_vars,
         wide_uid_config.is_some(),
         use_direnv,
-        &command,
+        command,
     );
 
     if let Some(ref config) = wide_uid_config {
@@ -873,12 +876,12 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let target = tmp.path().join("target");
         fs::create_dir(&target).unwrap();
-        let linka = tmp.path().join("linka");
-        let linkb = tmp.path().join("linkb");
-        std::os::unix::fs::symlink(&target, &linka).unwrap();
-        std::os::unix::fs::symlink(&target, &linkb).unwrap();
+        let first_link = tmp.path().join("first_link");
+        let second_link = tmp.path().join("second_link");
+        std::os::unix::fs::symlink(&target, &first_link).unwrap();
+        std::os::unix::fs::symlink(&target, &second_link).unwrap();
 
-        let raw = format!("{}:{}", linka.display(), linkb.display());
+        let raw = format!("{}:{}", first_link.display(), second_link.display());
         let result = resolve_host_terminfo_dirs(&raw).unwrap();
 
         let canonical = fs::canonicalize(&target).unwrap().display().to_string();

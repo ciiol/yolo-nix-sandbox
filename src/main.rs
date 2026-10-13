@@ -13,7 +13,7 @@ fn main() {
     let cli = Cli::parse();
     let command = cli.command.resolve();
 
-    let status = match sandbox::run(command) {
+    let status = match sandbox::run(&command) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("yolo: {e:#}");

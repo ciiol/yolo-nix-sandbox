@@ -47,17 +47,15 @@ pub fn gen_hosts() -> String {
 /// Best-effort recursive copy: continues past individual file errors
 /// to match `cp -a ... 2>/dev/null || true` behavior from the bash version.
 fn copy_dir_contents(src: &Path, dst: &Path) {
-    let entries = match fs::read_dir(src) {
-        Ok(e) => e,
-        Err(_) => return,
+    let Ok(entries) = fs::read_dir(src) else {
+        return;
     };
 
     for entry in entries.flatten() {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
-        let metadata = match fs::symlink_metadata(&src_path) {
-            Ok(m) => m,
-            Err(_) => continue,
+        let Ok(metadata) = fs::symlink_metadata(&src_path) else {
+            continue;
         };
 
         if metadata.is_symlink() {

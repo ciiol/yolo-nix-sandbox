@@ -10,3 +10,6 @@ command-fds = "0.3"
 nix = { version = "0.31", features = ["user", "fs"] }
 serde_json = "1"
 tempfile = "3"
+
+[lints.clippy]
+pedantic = "warn"
