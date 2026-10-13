@@ -136,6 +136,13 @@
           formatting = (treefmtEval nixpkgs.legacyPackages.${system}).config.build.check self;
           yolo = self.packages.${system}.default;
           yolo-test = craneLib.cargoTest (commonArgs // { inherit cargoArtifacts; });
+          yolo-clippy = craneLib.cargoClippy (
+            commonArgs
+            // {
+              inherit cargoArtifacts;
+              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+            }
+          );
         }
       );
 

@@ -20,16 +20,24 @@ pub struct WideUidConfig {
 /// Last matching entry wins (matches bash behavior).
 pub fn get_subid_range(path: &Path, user: &str) -> Option<SubIdRange> {
     let contents = fs::read_to_string(path).ok()?;
-    let mut result = None;
-    for line in contents.lines() {
-        let parts: Vec<&str> = line.split(':').collect();
-        if parts.len() == 3 && parts[0] == user {
-            if let (Ok(start), Ok(count)) = (parts[1].parse::<u32>(), parts[2].parse::<u32>()) {
-                result = Some(SubIdRange { start, count });
-            }
-        }
+    contents
+        .lines()
+        .rev()
+        .find_map(|line| parse_subid_line(line, user))
+}
+
+fn parse_subid_line(line: &str, user: &str) -> Option<SubIdRange> {
+    let parts: Vec<&str> = line.split(':').collect();
+    let [name, start, count] = parts[..] else {
+        return None;
+    };
+    if name != user {
+        return None;
     }
-    result
+    Some(SubIdRange {
+        start: start.parse().ok()?,
+        count: count.parse().ok()?,
+    })
 }
 
 fn command_exists(name: &str) -> bool {

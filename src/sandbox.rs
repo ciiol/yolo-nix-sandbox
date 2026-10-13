@@ -62,12 +62,14 @@ fn chmod_recursive_writable(path: &Path) {
         path,
         fs::Permissions::from_mode(metadata.permissions().mode() | 0o700),
     );
-    if metadata.is_dir() {
-        if let Ok(entries) = fs::read_dir(path) {
-            for entry in entries.flatten() {
-                chmod_recursive_writable(&entry.path());
-            }
-        }
+    if !metadata.is_dir() {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        chmod_recursive_writable(&entry.path());
     }
 }
 
@@ -147,16 +149,15 @@ fn detect_optional_mounts() -> Vec<(MountType, &'static str)> {
 fn collect_terminal_vars() -> Vec<(String, String)> {
     let mut vars = Vec::new();
     for key in ["TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION"] {
-        if let Ok(val) = env::var(key) {
-            if !val.is_empty() {
-                vars.push((key.into(), val));
-            }
+        if let Some(val) = env::var(key).ok().filter(|v| !v.is_empty()) {
+            vars.push((key.into(), val));
         }
     }
-    if let Ok(raw) = env::var("TERMINFO_DIRS") {
-        if let Some(resolved) = resolve_host_terminfo_dirs(&raw) {
-            vars.push(("YOLO_HOST_TERMINFO_DIRS".into(), resolved));
-        }
+    let host_terminfo_dirs = env::var("TERMINFO_DIRS")
+        .ok()
+        .and_then(|raw| resolve_host_terminfo_dirs(&raw));
+    if let Some(dirs) = host_terminfo_dirs {
+        vars.push(("YOLO_HOST_TERMINFO_DIRS".into(), dirs));
     }
     vars
 }
