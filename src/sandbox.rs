@@ -198,6 +198,7 @@ struct SandboxContext {
     profile: PathBuf,
     entrypoint: PathBuf,
     usrbinenv: Option<PathBuf>,
+    binsh: Option<PathBuf>,
 }
 
 fn persistent_state_mounts(home: &str, data_dir: &Path) -> Vec<String> {
@@ -347,6 +348,14 @@ fn build_bwrap_args(
         ]);
     }
 
+    if let Some(path) = &ctx.binsh {
+        args.extend([
+            "--symlink".into(),
+            path.display().to_string(),
+            "/bin/sh".into(),
+        ]);
+    }
+
     args.push("--".into());
     args.push(ctx.entrypoint.display().to_string());
     if use_direnv {
@@ -435,6 +444,7 @@ pub fn run(command: &[String]) -> Result<ExitStatus> {
     let optional_mounts = detect_optional_mounts();
     let terminal_vars = collect_terminal_vars();
     let usrbinenv = sandbox_env_path_optional("SANDBOX_USRBINENV");
+    let binsh = sandbox_env_path_optional("SANDBOX_BINSH");
 
     let ctx = SandboxContext {
         user: user.name,
@@ -447,6 +457,7 @@ pub fn run(command: &[String]) -> Result<ExitStatus> {
         profile,
         entrypoint,
         usrbinenv,
+        binsh,
     };
 
     let bwrap_args = build_bwrap_args(
@@ -481,6 +492,7 @@ mod tests {
             profile: PathBuf::from("/nix/store/fake-profile"),
             entrypoint: PathBuf::from("/nix/store/fake-entrypoint/bin/sandbox-entrypoint"),
             usrbinenv: None,
+            binsh: None,
         }
     }
 
@@ -919,6 +931,36 @@ mod tests {
             !args
                 .windows(3)
                 .any(|w| w[0] == "--symlink" && w[2] == "/usr/bin/env")
+        );
+    }
+
+    #[test]
+    fn bwrap_args_binsh_symlink_when_set() {
+        let mut ctx = test_ctx();
+        ctx.binsh = Some(PathBuf::from("/nix/store/fake-bash-interactive/bin/sh"));
+        let args = default_args(&ctx);
+        assert!(has_triple(
+            &args,
+            "--symlink",
+            "/nix/store/fake-bash-interactive/bin/sh",
+            "/bin/sh"
+        ));
+        let symlink_pos = args
+            .windows(3)
+            .position(|w| w[0] == "--symlink" && w[2] == "/bin/sh")
+            .unwrap();
+        let sep_pos = args.iter().position(|a| a == "--").unwrap();
+        assert!(symlink_pos < sep_pos);
+    }
+
+    #[test]
+    fn bwrap_args_binsh_omitted_when_none() {
+        let ctx = test_ctx();
+        let args = default_args(&ctx);
+        assert!(
+            !args
+                .windows(3)
+                .any(|w| w[0] == "--symlink" && w[2] == "/bin/sh")
         );
     }
 

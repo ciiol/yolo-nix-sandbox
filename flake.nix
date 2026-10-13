@@ -107,7 +107,8 @@
                   --set SANDBOX_PROFILE "${env.SANDBOX_PROFILE}" \
                   --set SANDBOX_ETC "${env.SANDBOX_ETC}" \
                   --set SANDBOX_ENTRYPOINT "${env.SANDBOX_ENTRYPOINT}" \
-                  --set SANDBOX_USRBINENV "${env.SANDBOX_USRBINENV}"
+                  --set SANDBOX_USRBINENV "${env.SANDBOX_USRBINENV}" \
+                  --set SANDBOX_BINSH "${env.SANDBOX_BINSH}"
               '';
 
           ralphex = pkgs.callPackage ./sandbox/pkgs/ralphex.nix { };

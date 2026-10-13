@@ -144,12 +144,27 @@ def test_usr_bin_env_exists(yolo):
     yolo("test", "-x", "/usr/bin/env")
 
 
-def test_usr_bin_env_runs_shebang(yolo):
-    """A `#!/usr/bin/env sh` shebang script under /tmp runs successfully."""
-    cmd = (
-        r"printf '#!/usr/bin/env sh\necho ok\n' > /tmp/shebang_test"
-        " && chmod +x /tmp/shebang_test"
-        " && /tmp/shebang_test"
-    )
-    result = yolo("bash", "-c", cmd)
+def test_usr_bin_env_runs_shebang(yolo, project_path):
+    """A `#!/usr/bin/env sh` shebang script runs successfully."""
+    script = project_path / "script.sh"
+    script.write_text("#!/usr/bin/env sh\necho ok\n")
+    script.chmod(0o755)
+    result = yolo(str(script))
+    assert result.stdout.strip() == "ok"
+
+
+def test_bin_sh_exists(yolo):
+    """/bin/sh is a symlink into the Nix store and is executable."""
+    target = yolo("readlink", "/bin/sh").stdout.strip()
+    assert target.startswith("/nix/store/"), f"expected /nix/store/ target, got {target!r}"
+    assert target.endswith("/bin/sh"), f"expected .../bin/sh, got {target!r}"
+    yolo("test", "-x", "/bin/sh")
+
+
+def test_bin_sh_runs_shebang(yolo, project_path):
+    """A `#!/bin/sh` shebang script runs successfully."""
+    script = project_path / "script.sh"
+    script.write_text("#!/bin/sh\necho ok\n")
+    script.chmod(0o755)
+    result = yolo(str(script))
     assert result.stdout.strip() == "ok"

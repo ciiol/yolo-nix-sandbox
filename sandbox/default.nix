@@ -33,5 +33,7 @@ in
     SANDBOX_ENTRYPOINT = "${entrypoint}/bin/sandbox-entrypoint";
     SANDBOX_USRBINENV =
       if nixos.config.environment.usrbinenv == null then "" else nixos.config.environment.usrbinenv;
+    SANDBOX_BINSH =
+      if nixos.config.environment.binsh == null then "" else nixos.config.environment.binsh;
   };
 }
