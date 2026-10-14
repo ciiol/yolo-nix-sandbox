@@ -2,6 +2,7 @@
 
 import os
 import pwd
+from pathlib import Path
 
 import pytest
 
@@ -168,3 +169,22 @@ def test_bin_sh_runs_shebang(yolo, project_path):
     script.chmod(0o755)
     result = yolo(str(script))
     assert result.stdout.strip() == "ok"
+
+
+def test_run_binfmt_mounted_readonly(yolo):
+    """Host /run/binfmt (binfmt interpreter links) is visible in the sandbox."""
+    if not Path("/run/binfmt").is_dir():
+        pytest.skip("host has no /run/binfmt")
+    yolo("test", "-d", "/run/binfmt")
+    options = yolo("findmnt", "-n", "-o", "OPTIONS", "/run/binfmt").stdout.strip()
+    assert "ro" in options.split(","), f"expected read-only mount, got {options!r}"
+
+
+def test_binfmt_misc_mounted_readonly(yolo):
+    """Host binfmt_misc status is readable in the sandbox through a read-only mount."""
+    if not Path("/proc/sys/fs/binfmt_misc/status").exists():
+        pytest.skip("host has no mounted binfmt_misc")
+    status = yolo("cat", "/proc/sys/fs/binfmt_misc/status").stdout.strip()
+    assert status in ("enabled", "disabled"), f"unexpected binfmt_misc status {status!r}"
+    options = yolo("findmnt", "-n", "-o", "OPTIONS", "/proc/sys/fs/binfmt_misc").stdout.strip()
+    assert "ro" in options.split(","), f"expected read-only mount, got {options!r}"

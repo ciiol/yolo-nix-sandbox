@@ -140,6 +140,14 @@ fn detect_optional_mounts() -> Vec<(MountType, &'static str)> {
     if Path::new("/dev/net/tun").exists() {
         mounts.push((MountType::DevBind, "/dev/net/tun"));
     }
+    // Kernel binfmt handlers still apply inside the sandbox, but their
+    // registered interpreters live under /run/binfmt, which is otherwise absent.
+    if Path::new("/run/binfmt").is_dir() {
+        mounts.push((MountType::RoBind, "/run/binfmt"));
+    }
+    if Path::new("/proc/sys/fs/binfmt_misc/status").exists() {
+        mounts.push((MountType::RoBind, "/proc/sys/fs/binfmt_misc"));
+    }
     mounts
 }
 
@@ -786,6 +794,43 @@ mod tests {
             "/dev/net/tun",
             "/dev/net/tun"
         ));
+    }
+
+    #[test]
+    fn bwrap_args_binfmt_mounts() {
+        let ctx = test_ctx();
+        let mounts = vec![
+            (MountType::RoBind, "/run/binfmt"),
+            (MountType::RoBind, "/proc/sys/fs/binfmt_misc"),
+        ];
+        let args = build_bwrap_args(&ctx, &mounts, &[], false, false, &["bash".into()]);
+        assert!(has_triple(&args, "--ro-bind", "/run/binfmt", "/run/binfmt"));
+        assert!(has_triple(
+            &args,
+            "--ro-bind",
+            "/proc/sys/fs/binfmt_misc",
+            "/proc/sys/fs/binfmt_misc"
+        ));
+    }
+
+    #[test]
+    fn bwrap_args_binfmt_misc_after_proc() {
+        let ctx = test_ctx();
+        let mounts = vec![(MountType::RoBind, "/proc/sys/fs/binfmt_misc")];
+        let args = build_bwrap_args(&ctx, &mounts, &[], false, false, &["bash".into()]);
+        let proc_pos = args
+            .windows(2)
+            .position(|w| w[0] == "--proc" && w[1] == "/proc")
+            .unwrap();
+        let binfmt_pos = args
+            .windows(3)
+            .position(|w| {
+                w[0] == "--ro-bind"
+                    && w[1] == "/proc/sys/fs/binfmt_misc"
+                    && w[2] == "/proc/sys/fs/binfmt_misc"
+            })
+            .unwrap();
+        assert!(binfmt_pos > proc_pos);
     }
 
     #[test]

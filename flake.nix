@@ -45,7 +45,6 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           craneLib = crane.mkLib pkgs;
-          inherit (import ./sandbox { inherit nixpkgs system; }) env;
           commonArgs = {
             src = pkgs.lib.fileset.toSource {
               root = ./.;
@@ -58,29 +57,6 @@
             strictDeps = true;
           };
           cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-        in
-        {
-          inherit
-            pkgs
-            craneLib
-            env
-            commonArgs
-            cargoArtifacts
-            ;
-        }
-      );
-    in
-    {
-      packages = forAllSystems (
-        system:
-        let
-          inherit (perSystem.${system})
-            pkgs
-            craneLib
-            env
-            commonArgs
-            cargoArtifacts
-            ;
           yolo-unwrapped = craneLib.buildPackage (
             commonArgs
             // {
@@ -88,10 +64,17 @@
               doCheck = false;
             }
           );
-          yolo =
+          mkYolo =
+            {
+              hostConfig ? null,
+            }:
+            let
+              inherit (import ./sandbox { inherit nixpkgs system hostConfig; }) env;
+            in
             pkgs.runCommand "yolo-${yolo-unwrapped.version}"
               {
                 nativeBuildInputs = [ pkgs.makeWrapper ];
+                passthru.sandboxEnv = env;
                 meta.mainProgram = "yolo";
               }
               ''
@@ -110,7 +93,24 @@
                   --set SANDBOX_USRBINENV "${env.SANDBOX_USRBINENV}" \
                   --set SANDBOX_BINSH "${env.SANDBOX_BINSH}"
               '';
-
+        in
+        {
+          inherit
+            pkgs
+            craneLib
+            commonArgs
+            cargoArtifacts
+            mkYolo
+            ;
+        }
+      );
+    in
+    {
+      packages = forAllSystems (
+        system:
+        let
+          inherit (perSystem.${system}) pkgs mkYolo;
+          yolo = mkYolo { };
           ralphex = pkgs.callPackage ./sandbox/pkgs/ralphex.nix { };
           revdiff = pkgs.callPackage ./sandbox/pkgs/revdiff.nix { };
         in
@@ -150,7 +150,7 @@
       devShells = forAllSystems (
         system:
         let
-          inherit (perSystem.${system}) pkgs craneLib env;
+          inherit (perSystem.${system}) pkgs craneLib;
           pythonWithPackages = pkgs.python3.withPackages (ps: [
             ps.pytest
           ]);
@@ -162,16 +162,21 @@
               pkgs.just
               pythonWithPackages
             ];
-            inherit env;
+            env = self.packages.${system}.yolo.sandboxEnv;
           };
         }
       );
 
       homeModules.default =
-        { lib, pkgs, ... }:
+        { lib, pkgs, ... }@args:
         {
           imports = [ ./modules/home-manager.nix ];
-          programs.yolo.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          programs.yolo.package = lib.mkDefault (
+            perSystem.${pkgs.stdenv.hostPlatform.system}.mkYolo {
+              # Only Home Manager running as a NixOS module passes osConfig; standalone HM has none.
+              hostConfig = args.osConfig or null;
+            }
+          );
         };
     };
 }

@@ -1,4 +1,8 @@
-{ nixpkgs, system }:
+{
+  nixpkgs,
+  system,
+  hostConfig ? null,
+}:
 let
   pkgs = nixpkgs.legacyPackages.${system};
   overlay = final: _prev: {
@@ -8,6 +12,7 @@ let
     revdiff-plugin = final.callPackage ./pkgs/revdiff-plugin.nix { };
   };
   nixos = nixpkgs.lib.nixosSystem {
+    specialArgs = { inherit hostConfig; };
     modules = [
       {
         nixpkgs.hostPlatform = system;
@@ -18,6 +23,7 @@ let
       ./modules/pi.nix
       ./modules/ralphex.nix
       ./modules/revdiff.nix
+      ./modules/host.nix
       ./configuration.nix
     ];
   };
