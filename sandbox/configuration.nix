@@ -134,10 +134,17 @@
     ];
   };
 
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix = {
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    # Only the store db and daemon socket are mounted from /nix/var/nix, so
+    # root's channels profile never exists here. Leaving it in NIX_PATH makes
+    # every lookup that misses nixpkgs=flake:nixpkgs warn about it, and nixpkgs
+    # itself looks up <nixpkgs-overlays> on every impure evaluation.
+    channel.enable = false;
+  };
 
   virtualisation.containers = {
     enable = true;

@@ -109,6 +109,15 @@ def test_nix_daemon_reachable(yolo):
     assert result.returncode == 0, f"nix store info failed: {result.stderr}"
 
 
+def test_nix_search_path_has_no_missing_entries(yolo):
+    """A search path lookup that misses nixpkgs evaluates without warnings."""
+    result = yolo(
+        "nix-instantiate", "--eval", "--expr", "(builtins.tryEval <nixpkgs-overlays>).success"
+    )
+    assert result.stdout.strip() == "false"
+    assert "warning" not in result.stderr, result.stderr
+
+
 def test_passwd_has_three_lines(yolo):
     """/etc/passwd has exactly 3 lines."""
     result = yolo("wc", "-l", "/etc/passwd")
