@@ -10,7 +10,8 @@ stdenvNoCC.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    cp -r .claude-plugin $out
+    mkdir -p $out
+    cp -r .claude-plugin $out/
     runHook postInstall
   '';
 
