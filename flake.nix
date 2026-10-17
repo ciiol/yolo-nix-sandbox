@@ -106,19 +106,9 @@
       );
     in
     {
-      packages = forAllSystems (
-        system:
-        let
-          inherit (perSystem.${system}) pkgs mkYolo;
-          yolo = mkYolo { };
-          ralphex = pkgs.callPackage ./sandbox/pkgs/ralphex.nix { };
-          revdiff = pkgs.callPackage ./sandbox/pkgs/revdiff.nix { };
-        in
-        {
-          default = yolo;
-          inherit yolo ralphex revdiff;
-        }
-      );
+      packages = forAllSystems (system: {
+        default = perSystem.${system}.mkYolo { };
+      });
 
       formatter = forAllSystems (
         system: (treefmtEval nixpkgs.legacyPackages.${system}).config.build.wrapper
@@ -162,7 +152,7 @@
               pkgs.just
               pythonWithPackages
             ];
-            env = self.packages.${system}.yolo.sandboxEnv;
+            env = self.packages.${system}.default.sandboxEnv;
           };
         }
       );
