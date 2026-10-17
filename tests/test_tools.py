@@ -17,6 +17,7 @@ TOOLS = [
     "pi",
     "ralphex",
     "revdiff",
+    "revmux",
     "direnv",
     "man",
     "dig",

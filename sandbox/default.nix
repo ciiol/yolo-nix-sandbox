@@ -10,6 +10,8 @@ let
     ralphex-plugin = final.callPackage ./pkgs/ralphex-plugin.nix { };
     revdiff = final.callPackage ./pkgs/revdiff.nix { };
     revdiff-plugin = final.callPackage ./pkgs/revdiff-plugin.nix { };
+    revmux = final.callPackage ./pkgs/revmux.nix { };
+    revmux-plugin = final.callPackage ./pkgs/revmux-plugin.nix { };
   };
   nixos = nixpkgs.lib.nixosSystem {
     specialArgs = { inherit hostConfig; };
@@ -23,6 +25,7 @@ let
       ./modules/pi.nix
       ./modules/ralphex.nix
       ./modules/revdiff.nix
+      ./modules/revmux.nix
       ./modules/host.nix
       ./configuration.nix
     ];

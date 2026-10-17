@@ -220,6 +220,7 @@ fn persistent_state_mounts(home: &str, data_dir: &Path) -> Vec<String> {
         ("ralphex", format!("{home}/.config/ralphex")),
         ("gh", format!("{home}/.config/gh")),
         ("revdiff", format!("{home}/.config/revdiff")),
+        ("revmux", format!("{home}/.config/revmux")),
         ("sops-age", format!("{home}/.config/sops/age")),
         ("containers", format!("{home}/.local/share/containers")),
     ] {
@@ -409,6 +410,7 @@ pub fn run(command: &[String]) -> Result<ExitStatus> {
         "ralphex",
         "gh",
         "revdiff",
+        "revmux",
         "sops-age",
         "containers",
         "git",
@@ -632,6 +634,12 @@ mod tests {
             "--bind",
             "/tmp/sandbox/data/revdiff",
             "/home/testuser/.config/revdiff"
+        ));
+        assert!(has_triple(
+            &args,
+            "--bind",
+            "/tmp/sandbox/data/revmux",
+            "/home/testuser/.config/revmux"
         ));
         assert!(has_triple(
             &args,

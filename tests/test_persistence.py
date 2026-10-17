@@ -11,6 +11,7 @@ PERSISTENCE_PATHS = [
     ".config/ralphex",
     ".config/gh",
     ".config/revdiff",
+    ".config/revmux",
     ".local/share/containers",
     ".config/sops/age",
 ]
