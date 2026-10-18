@@ -2,6 +2,7 @@
   nixpkgs,
   system,
   hostConfig ? null,
+  hostGit ? null,
 }:
 let
   pkgs = nixpkgs.legacyPackages.${system};
@@ -14,7 +15,7 @@ let
     revmux-plugin = final.callPackage ./pkgs/revmux-plugin.nix { };
   };
   nixos = nixpkgs.lib.nixosSystem {
-    specialArgs = { inherit hostConfig; };
+    specialArgs = { inherit hostConfig hostGit; };
     modules = [
       {
         nixpkgs.hostPlatform = system;

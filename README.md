@@ -73,6 +73,9 @@ Add yolo as a flake input and enable the Home Manager module:
 }
 ```
 
+The Home Manager module also carries part of the host configuration into the
+sandbox, such as your Git identity and global ignores.
+
 ### Enabling Podman
 
 To enable Podman, you need to configure subordinate user and group ID ranges for your user.

@@ -1,4 +1,10 @@
-{ lib, hostConfig, ... }:
+{
+  lib,
+  pkgs,
+  hostConfig,
+  hostGit,
+  ...
+}:
 let
   # Builds go to the host daemon, so nix.conf should report what it can build
   # (e.g. aarch64-linux via the host's boot.binfmt.emulatedSystems).
@@ -15,4 +21,14 @@ in
   nix.settings = lib.mapAttrs (_: lib.mkForce) (
     lib.filterAttrs (name: _: lib.elem name mirroredNixSettings) hostNixSettings
   );
+
+  programs.git = lib.mkIf (hostGit != null) {
+    config = lib.filter (fragment: fragment != { }) (
+      lib.toList hostGit.settings
+      ++ lib.optional (hostGit.ignores != [ ]) {
+        core.excludesFile = "${pkgs.writeText "gitignore" (lib.concatLines hostGit.ignores)}";
+      }
+    );
+    attributes = lib.concatStringsSep "\n" hostGit.attributes;
+  };
 }

@@ -67,9 +67,20 @@
           mkYolo =
             {
               hostConfig ? null,
+              hostGit ? null,
             }:
             let
-              inherit (import ./sandbox { inherit nixpkgs system hostConfig; }) env;
+              inherit
+                (import ./sandbox {
+                  inherit
+                    nixpkgs
+                    system
+                    hostConfig
+                    hostGit
+                    ;
+                })
+                env
+                ;
             in
             pkgs.runCommand "yolo-${yolo-unwrapped.version}"
               {
@@ -158,13 +169,19 @@
       );
 
       homeModules.default =
-        { lib, pkgs, ... }@args:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }@args:
         {
           imports = [ ./modules/home-manager.nix ];
           programs.yolo.package = lib.mkDefault (
             perSystem.${pkgs.stdenv.hostPlatform.system}.mkYolo {
               # Only Home Manager running as a NixOS module passes osConfig; standalone HM has none.
               hostConfig = args.osConfig or null;
+              hostGit = config.programs.yolo.git;
             }
           );
         };
