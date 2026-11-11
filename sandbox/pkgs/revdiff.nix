@@ -4,7 +4,7 @@
   fetchFromGitHub,
 }:
 let
-  version = "1.13.0";
+  version = "1.15.0";
 in
 buildGoModule {
   pname = "revdiff";
@@ -14,24 +14,20 @@ buildGoModule {
     owner = "umputun";
     repo = "revdiff";
     tag = "v${version}";
-    hash = "sha256-qcah2Fx4u9AXEfb22R9BW3Rv9oYx+H8+KPGQVRjOr98=";
+    hash = "sha256-5KJ8q4cDLiFP64iCAt5NvJ9lm4zF9R9snGRiOtxEGis=";
   };
 
   vendorHash = null;
 
   doCheck = false;
 
-  subPackages = [ "app" ];
+  subPackages = [ "app/revdiff" ];
 
   ldflags = [
     "-s"
     "-w"
     "-X main.revision=v${version}"
   ];
-
-  postInstall = ''
-    mv $out/bin/app $out/bin/revdiff
-  '';
 
   meta = {
     description = "Terminal UI for reviewing diffs, files, and documents with inline annotations";

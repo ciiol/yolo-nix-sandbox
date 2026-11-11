@@ -4,7 +4,7 @@
   fetchFromGitHub,
 }:
 let
-  version = "0.2.6";
+  version = "0.2.7";
 in
 buildGoModule {
   pname = "revmux";
@@ -14,7 +14,7 @@ buildGoModule {
     owner = "umputun";
     repo = "revmux";
     tag = "v${version}";
-    hash = "sha256-h5uBAnIJf/rpTkOC/k9ihyhjBc2j4VZfFv3tkhyXHBs=";
+    hash = "sha256-MO+N0KPO30fBBTnr7F1G/fXdPI/2pjtCRR0uevgW05A=";
   };
 
   vendorHash = null;
